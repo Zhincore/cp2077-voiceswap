@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "cp2077_voiceswap"
@@ -11,11 +11,18 @@ authors = [
 description = ""
 readme = "README.md"
 requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: Windows",
+dependencies  = [
+  "asyncio",
+  "python-dotenv"
 ]
+
+[project.optional-dependencies]
+dev = ["isort", "pylint", "autopep8"]
+
+[project.scripts]
+voiceswap = "main:main"
+extract_files = "main:extract_files"
+wem2ogg = "main:wem2ogg"
 
 [project.urls]
 "Homepage" = "https://github.com/zhincore/cp2077-voiceswap"

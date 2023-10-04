@@ -1,2 +1,8 @@
 .venv
+build
 libs
+*.egg-info
+.cache
+.env
+!.env.example
+__pycache__
