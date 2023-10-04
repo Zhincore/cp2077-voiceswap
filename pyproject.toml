@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cp2077_voiceswap"
+version = "0.0.1"
+authors = [
+  { name="Zhincore", email="adam@zhincore.eu" },
+]
+description = ""
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Windows",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/zhincore/cp2077-voiceswap"
+"Bug Tracker" = "https://github.com/zhincore/cp2077-voiceswap/issues"
