@@ -17,7 +17,7 @@ dependencies  = [
 ]
 
 [project.optional-dependencies]
-dev = ["isort", "pylint", "autopep8"]
+dev = ["isort", "autopep8"]
 
 [project.scripts]
 voiceswap = "main:main"

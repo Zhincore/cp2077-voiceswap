@@ -3,12 +3,13 @@ import asyncio
 import argparse
 from dotenv import load_dotenv
 import lib.wolvenkit as wolvenkit
-import lib.ww2ogg as ww2ogg
+import lib.ffmpeg as ffmpeg
+from ww2wav import ww2wav_all_cache
 
 load_dotenv(".env")
 
 parser = argparse.ArgumentParser(
-    prog="Cyberpunk2077 VoiceSwap",
+    prog="voiceswap",
     description="What the program does")
 subcommands = parser.add_subparsers(
     title="subcommand", required=True, dest="subcommand")
@@ -19,9 +20,9 @@ parser_extract_files = subcommands.add_parser(
 parser_extract_files.add_argument(
     "pattern", type=str, help="The file name pattern to extract.")
 
-# wem2ogg
-parser_wem2ogg = subcommands.add_parser(
-    "wem2ogg", help="Converts all cached .wem files to .ogg files")
+# wem2wav
+parser_wem2wav = subcommands.add_parser(
+    "wem2wav", help="Converts all cached .wem files to .wav files")
 
 
 async def main():
@@ -31,8 +32,8 @@ async def main():
     args = parser.parse_args(sys.argv[1:])
     if args.subcommand == "extract_files":
         await wolvenkit.extract_files(args.pattern)
-    elif args.subcommand == "wem2ogg":
-        await ww2ogg.ww2ogg_all_cache()
+    elif args.subcommand == "wem2wav":
+        await ww2wav_all_cache()
     else:
         parser.print_usage()
 
