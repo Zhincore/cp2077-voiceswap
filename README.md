@@ -19,9 +19,8 @@ Using WolvenKit for modding and RVC for voice conversion.
 
 0. Download and install dependencies
 1. Unpack wanted voice lines from the game (WolvenKit)
-2. Convert them from .wem to .ogg (ww2ogg)
-   1. Convert .ogg to .wav (FFmpeg)
-3. Separate voice and effects (RVC) **WIP**
+2. Convert them from .wem to a usable format (ww2ogg)
+3. Separate voice and effects (RVC)
 4. Convert to wanted voice (RVC) **TODO**
 5. Merge the new voice and effects (FFmpeg) **TODO**
 6. Convert the voice lines back to .wem (WWise) **TODO**
@@ -33,7 +32,7 @@ Using WolvenKit for modding and RVC for voice conversion.
    - The linked README isn't very clear and I am not sure how I got it working either so... good luck.
    - Either use poetry or create a venv to use with pip.
    - In addition to RVC's installation also run `poetry add onnxruntime` or `pip install onnxruntime` (depending on which one you used previously).
-     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for extra performance.
+     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for big performance improvement.
 2. Install [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise):
    1. Install their launcher.
    2. Using the launcher, install Wwise version **2019.2.15**, other versions don't seem to work with Cyberpunk.
@@ -67,10 +66,10 @@ Use `<subcommand> -h` to display help, which will tell you more about the parame
 - **Phase 1:** `extract_files <regex>` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
   - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
   - This usually takes few a minutes, depending on the number of files and drive speed.
-- **Phase 2:** `wem2wav` - Converts all .wem files in `.cache/archive` to .wav files in `.cache/raw`.
+- **Phase 2:** `export_wem` - Converts all .wem files in `.cache/archive` to a usable format in `.cache/raw`.
   - This usually takes a few minutes, too.
 - **Phase 3:** `isolate_vocals` - Splits audio files to vocals and effects.
-  - This may take hours on V's voicelines, this is probably the longest phase.
+  - This may take a few hours on V's voicelines, this is probably the longest phase.
 
 ## Development
 

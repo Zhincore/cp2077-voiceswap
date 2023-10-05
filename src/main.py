@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
 import lib.rvc as rvc
-from wem2wav import wem2wav_all_cache
-from config import WOLVENKIT_OUTPUT, UVR_OUTPUT, UVR_MODEL, WAV_OUTPUT
+import lib.ww2ogg as ww2ogg
+from config import WOLVENKIT_OUTPUT, UVR_OUTPUT, UVR_MODEL, WW2OGG_OUTPUT
 
 load_dotenv(".env")
 
@@ -36,23 +36,23 @@ parser_extract_files.add_argument(
     default=WOLVENKIT_OUTPUT
 )
 
-# wem2wav
-parser_wem2wav = subcommands.add_parser(
-    "wem2wav",
-    help="Converts all found .wem files to .wav files"
+# export_wem
+parser_export_wem = subcommands.add_parser(
+    "export_wem",
+    help="Converts all found .wem files to a usable format"
 )
-parser_wem2wav.add_argument(
+parser_export_wem.add_argument(
     "input",
     type=str,
     help="Path to folder of files to convert.",
     default=WOLVENKIT_OUTPUT,
     nargs="?"
 )
-parser_wem2wav.add_argument(
+parser_export_wem.add_argument(
     "output",
     type=str,
     help="Path where to output the converted files.",
-    default=WAV_OUTPUT,
+    default=WW2OGG_OUTPUT,
     nargs="?"
 )
 
@@ -63,7 +63,7 @@ parser_isolate_vocals.add_argument(
     "input",
     type=str,
     help="Path to folder of files to split.",
-    default=WAV_OUTPUT,
+    default=WW2OGG_OUTPUT,
     nargs="?"
 )
 parser_isolate_vocals.add_argument(
@@ -90,8 +90,8 @@ async def main():
         parser.print_help()
     elif args.subcommand == "extract_files":
         await extract_files(args)
-    elif args.subcommand == "wem2wav":
-        await wem2wav(args)
+    elif args.subcommand == "export_wem":
+        await export_wem(args)
     elif args.subcommand == "isolate_vocals":
         await isolate_vocals(args)
     else:
@@ -105,10 +105,10 @@ async def extract_files(args=None):
     await wolvenkit.extract_files(args.pattern, args.output)
 
 
-async def wem2wav(args=None):
-    """Converts all cached .wem files to .ogg files"""
-    args = args or parser_wem2wav.parse_args(sys.argv[1:])
-    await wem2wav_all_cache(args.input, args.output)
+async def export_wem(args=None):
+    """Converts all cached .wem files to a usable format."""
+    args = args or parser_ww2ogg.parse_args(sys.argv[1:])
+    await ww2ogg.ww2ogg_all(args.input, args.output)
 
 
 async def isolate_vocals(args=None):

@@ -31,7 +31,7 @@ async def uvr(model: str, input_path: str, output_path: str):
             continue
 
         path = root[len(input_path)+1:]
-        print(f"Running UVR for {path}...")
+        print(f"Starting UVR for {path}...")
 
         process = await asyncio.create_subprocess_exec(
             await get_executable(),
@@ -39,7 +39,9 @@ async def uvr(model: str, input_path: str, output_path: str):
             model,
             os.path.join(cwd, input_path, path),
             os.path.join(cwd, output_path, path),
+            str(len(files)),
             cwd=os.getenv("RVC_PATH"),
+            stderr=asyncio.subprocess.DEVNULL,  # it's primarily ffmpeg spam
         )
         result = await process.wait()
 

@@ -22,7 +22,7 @@ dev = ["isort", "autopep8"]
 [project.scripts]
 voiceswap = "main:main"
 extract_files = "main:extract_files"
-wem2wav = "main:wem2wav"
+export_wem = "main:export_wem"
 
 [project.urls]
 "Homepage" = "https://github.com/zhincore/cp2077-voiceswap"
