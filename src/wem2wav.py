@@ -4,11 +4,8 @@ from util import Parallel
 import lib.ww2ogg as ww2ogg
 import lib.ffmpeg as ffmpeg
 
-SOURCE = ".cache\\archive"
-TARGET = ".cache\\raw"
 
-
-async def wem2wav_all_cache():
+async def wem2wav_all_cache(input_path: str, output_path: str):
     """Converts all cached .wem files to .wav files"""
     parallel = Parallel()
     processes = []
@@ -17,26 +14,27 @@ async def wem2wav_all_cache():
     async def process(root: str, name: str):
         print(f"Converting {name} to .ogg...")
 
-        output = output = os.path.join(
-            TARGET + root[len(SOURCE):], name[:-4])
+        output_file = os.path.join(
+            output_path + root[len(input_path):], name[:-4])
 
-        await ww2ogg.ww2ogg(os.path.join(root, name), output+".ogg")
+        await ww2ogg.ww2ogg(os.path.join(root, name), output_file+".ogg")
 
         print(f"Converting {name} from .ogg to .wav...")
 
-        await ffmpeg.convert(output+".ogg", output+".wav")
+        await ffmpeg.convert(output_file+".ogg", output_file+".wav")
 
-        os.unlink(output+".ogg")
+        os.unlink(output_file+".ogg")
 
         done.append(object)
 
         print(f"Done converting {name}!")
         print(f"{len(done)}/{len(processes)} files converted")
 
-    for root, _dirs, files in os.walk(SOURCE):
+    for root, _dirs, files in os.walk(input_path):
         for name in files:
             if name.endswith(".wem"):
-                os.makedirs(TARGET + root[len(SOURCE):], exist_ok=True)
+                os.makedirs(
+                    output_path + root[len(input_path):], exist_ok=True)
 
                 processes.append(
                     asyncio.create_task(

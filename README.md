@@ -3,17 +3,17 @@
 Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.  
 Using WolvenKit for modding and RVC for voice conversion.
 
-## Requiremens
+## Requirements
 
 - Windows 10 or later _(unfortunately)_
 - Python 3.7 or later
 - Cyberpunk 2077
 - [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md)
-  - Either use poetry or create a venv for RVC (or use the same venv as for this project, but that is not recommended)
-- [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise)
-  - In the launcher download Wwise version **2019.2**, other versions don't seem to work with Cyberpunk
+- [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise) **2019.2.15**
 - FFmpeg (usually included in RVC WebUI)
 - Basic knowledge of PowerShell
+
+**Highly recommended:** a good GPU with up-to-date drivers and installed [CUDA **11**](https://developer.nvidia.com/cuda-11-8-0-download-archive) for NVIDIA GPUs.
 
 ## Goals
 
@@ -21,7 +21,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 1. Unpack wanted voice lines from the game (WolvenKit)
 2. Convert them from .wem to .ogg (ww2ogg)
    1. Convert .ogg to .wav (FFmpeg)
-3. Separate voice and effects (RVC) **TODO**
+3. Separate voice and effects (RVC) **WIP**
 4. Convert to wanted voice (RVC) **TODO**
 5. Merge the new voice and effects (FFmpeg) **TODO**
 6. Convert the voice lines back to .wem (WWise) **TODO**
@@ -29,13 +29,19 @@ Using WolvenKit for modding and RVC for voice conversion.
 
 ## Installation
 
-Before starting, make sure you have all the [requirements](#requiremens)!
-Especially RVC, which has specific install instructions.
-
-0. Clone this repository (e.g. `git clone https://github.com/zhincore/cp2077-voiceswap` or download it as a zip and unpack).
-1. Go to the projects's folder (e.g. `cd cp2077-voiceswap`).
-2. Run `install.ps1` to install the project and dependencies.
-3. Create a file named `.env`, use `.env.example` as a template and configure it for your setup.
+1. Install [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) to a folder of your choice.
+   - The linked README isn't very clear and I am not sure how I got it working either so... good luck.
+   - Either use poetry or create a venv to use with pip.
+   - In addition to RVC's installation also run `poetry add onnxruntime` or `pip install onnxruntime` (depending on which one you used previously).
+     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for extra performance.
+2. Install [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise):
+   1. Install their launcher.
+   2. Using the launcher, install Wwise version **2019.2.15**, other versions don't seem to work with Cyberpunk.
+3. Install this project:
+   1. Clone this repository (e.g. `git clone https://github.com/zhincore/cp2077-voiceswap` or download it as a zip and unpack).
+   2. Go to the projects's folder (e.g. `cd cp2077-voiceswap`).
+   3. Run `install.ps1` to install the project and dependencies.
+   4. Create a file named `.env`, use `.env.example` as a template and configure it for your setup.
 
 ## Usage
 
@@ -56,11 +62,15 @@ Use the following arguments to configure that process:
 If you want to run only a specific phase of the process, you can use the following subcommands.
 These can be used either as `voiceswap <subcommand> (...arguments...)` or directly as `<subcommand> (...arguments...)` without the voiceswap prefix.
 
+Use `<subcommand> -h` to display help, which will tell you more about the parameters.
+
 - **Phase 1:** `extract_files <regex>` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
   - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
   - This usually takes few a minutes, depending on the number of files and drive speed.
 - **Phase 2:** `wem2wav` - Converts all .wem files in `.cache/archive` to .wav files in `.cache/raw`.
   - This usually takes a few minutes, too.
+- **Phase 3:** `isolate_vocals` - Splits audio files to vocals and effects.
+  - This may take hours on V's voicelines, this is probably the longest phase.
 
 ## Development
 

@@ -3,7 +3,7 @@ import asyncio
 from util import SubprocessException
 
 
-async def extract_files(pattern: str):
+async def extract_files(pattern: str, output_path: str):
     """Extracts files from the game matching the given pattern."""
     game_path = os.getenv("CYBERPUNK_PATH")
 
@@ -11,7 +11,7 @@ async def extract_files(pattern: str):
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
         "unbundle",
         "-p", f"{game_path}\\archive\\pc\\content",
-        "-o", ".cache\\archive",
+        "-o", output_path,
         "-r", pattern
     )
     result = await process.wait()
