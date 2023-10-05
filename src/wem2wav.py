@@ -8,7 +8,7 @@ SOURCE = ".cache\\archive"
 TARGET = ".cache\\raw"
 
 
-async def ww2wav_all_cache():
+async def wem2wav_all_cache():
     """Converts all cached .wem files to .wav files"""
     parallel = Parallel()
     processes = []

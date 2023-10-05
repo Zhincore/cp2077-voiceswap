@@ -1,6 +1,7 @@
 .venv
 build
-libs
+libs/*
+!libs/rvc_uvr.py
 *.egg-info
 .cache
 .env

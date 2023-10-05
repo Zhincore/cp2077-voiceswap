@@ -4,7 +4,7 @@ import argparse
 from dotenv import load_dotenv
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
-from ww2wav import ww2wav_all_cache
+from wem2wav import wem2wav_all_cache
 
 load_dotenv(".env")
 
@@ -33,7 +33,7 @@ async def main():
     if args.subcommand == "extract_files":
         await wolvenkit.extract_files(args.pattern)
     elif args.subcommand == "wem2wav":
-        await ww2wav_all_cache()
+        await wem2wav_all_cache()
     else:
         parser.print_usage()
 
@@ -44,9 +44,9 @@ async def extract_files():
     await wolvenkit.extract_files(args.pattern)
 
 
-async def wem2ogg():
+async def wem2wav():
     """Converts all cached .wem files to .ogg files"""
-    await ww2ogg.ww2ogg_all_cache()
+    await wem2wav_all_cache()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -45,9 +45,10 @@ Before running any of the commands, you must activate the venv using `.\.venv\Sc
 If you've done everything correctly, the following commands should be available in the command line.
 Also make sure your `.env` file contains the correct paths.
 
-To start the whole automated process, use the command `voiceswap (...arguments...)`. 
+To start the whole automated process, use the command `voiceswap (...arguments...)`.
 This runs all phases specified later in sequential order without needing any further user input.  
 Use the following arguments to configure that process:
+
 - **TODO**
 
 ### Subcommands / Phases
@@ -59,7 +60,7 @@ These can be used either as `voiceswap <subcommand> (...arguments...)` or direct
   - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
   - This usually takes few a minutes, depending on the number of files and drive speed.
 - **Phase 2:** `wem2wav` - Converts all .wem files in `.cache/archive` to .wav files in `.cache/raw`.
-  - This usually takes a few minutes, too. 
+  - This usually takes a few minutes, too.
 
 ## Development
 
