@@ -1,4 +1,7 @@
-# Cyberpunk 2077 - Voice Swap
+# Cyberpunk 2077 - VoiceSwap
+
+Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.  
+Using WolvenKit for modding and RVC for voice conversion.
 
 ## Requiremens
 
@@ -7,6 +10,8 @@
 - Cyberpunk 2077
 - [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md)
   - Either use poetry or create a venv for RVC (or use the same venv as for this project, but that is not recommended)
+- [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise)
+  - In the launcher download Wwise version **2019.2**, other versions don't seem to work with Cyberpunk
 - FFmpeg (usually included in RVC WebUI)
 - Basic knowledge of PowerShell
 
@@ -37,12 +42,24 @@ Especially RVC, which has specific install instructions.
 This project has to be used from the command line.
 
 Before running any of the commands, you must activate the venv using `.\.venv\Scripts\activate`!  
-If you've done everything correctly, you should have the following commands available:
+If you've done everything correctly, the following commands should be available in the command line.
+Also make sure your `.env` file contains the correct paths.
 
-### Commands
+To start the whole automated process, use the command `voiceswap (...arguments...)`. 
+This runs all phases specified later in sequential order without needing any further user input.  
+Use the following arguments to configure that process:
+- **TODO**
 
-- `extract_files <pattern>` - Extracts files matching specified pattern from the game using WolvenKit to `.cache/archive` folder (e.g. `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny's)
-- `wem2ogg` - Converts all wem files in `.cache/archive` to .ogg files in `.cache/raw`
+### Subcommands / Phases
+
+If you want to run only a specific phase of the process, you can use the following subcommands.
+These can be used either as `voiceswap <subcommand> (...arguments...)` or directly as `<subcommand> (...arguments...)` without the voiceswap prefix.
+
+- **Phase 1:** `extract_files <regex>` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
+  - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
+  - This usually takes few a minutes, depending on the number of files and drive speed.
+- **Phase 2:** `wem2wav` - Converts all .wem files in `.cache/archive` to .wav files in `.cache/raw`.
+  - This usually takes a few minutes, too. 
 
 ## Development
 
@@ -52,5 +69,5 @@ If you've done everything correctly, you should have the following commands avai
 
 ### These dependencies are installed by the install script
 
-- [WolvenKit](https://github.com/WolvenKit/WolvenKit)
-- [ww2ogg](https://github.com/hcs64/ww2ogg)
+- [WolvenKit](https://github.com/WolvenKit/WolvenKit) - modding the game
+- [ww2ogg](https://github.com/hcs64/ww2ogg) - converting .wem files to a standard format
