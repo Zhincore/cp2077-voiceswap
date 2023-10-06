@@ -12,6 +12,8 @@ Using WolvenKit for modding and RVC for voice conversion.
 - [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise) **2019.2.15**
 - FFmpeg (usually included in RVC WebUI)
 - Basic knowledge of PowerShell
+- At least 20 GB of free disk space, 25 GB if you're going for V's voicelines
+  - This is including ~16GB RVC
 
 **Highly recommended:** a good GPU with up-to-date drivers and installed [CUDA **11**](https://developer.nvidia.com/cuda-11-8-0-download-archive) for NVIDIA GPUs.
 
@@ -21,8 +23,8 @@ Using WolvenKit for modding and RVC for voice conversion.
 1. Unpack wanted voice lines from the game (WolvenKit)
 2. Convert them from .wem to a usable format (ww2ogg)
 3. Separate voice and effects (RVC)
-4. Convert to wanted voice (RVC) **WIP**
-5. Merge the new voice and effects (FFmpeg) **TODO**
+4. Convert to wanted voice (RVC)
+5. Merge the new voice and effects (FFmpeg) **WIP**
 6. Convert the voice lines back to .wem (WWise) **TODO**
 7. Pack the new lines as a mod (WolvenKit) **TODO**
 
@@ -32,7 +34,10 @@ Using WolvenKit for modding and RVC for voice conversion.
    - The linked README isn't very clear and I am not sure how I got it working either so... good luck.
    - Either use poetry or create a venv to use with pip.
    - In addition to RVC's installation also run `poetry add onnxruntime` or `pip install onnxruntime` (depending on which one you used previously).
-     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for big performance improvement.
+     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for improved performance.
+   - Find and download the voice model you want to use.
+     - Place your `.pth` files in `assets/weights/` and your `.index` files in `logs/`.
+     - Make sure both files have sensible names, they usually don't; rename them if needed.
 2. Install [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise):
    1. Install their launcher.
    2. Using the launcher, install Wwise version **2019.2.15**, other versions don't seem to work with Cyberpunk.
@@ -74,7 +79,7 @@ Use `<subcommand> -h` to display better detailed help.
   - This may take a few hours on V's voicelines, this is probably the longest phase.
   - It is done to preserve reverb and other effects, otherise the AI will make the effects by "mouth" and that's awful.
 - **Phase 4:** `revoice --model_name <model> [--index_path <index_path>]` - Processes audio files in `.cache/split/vocals` with given voice model and ouputs to `.cache/voiced`.
-  - Example: `revoice --model_name arianagrandev2 --index_path logs/arianagrandev2.index`
+  - Example: `revoice --model_name arianagrandev2.pth --index_path logs/arianagrandev2.index`
   - This may take approximately an hour on V's voicelines.
 
 ## Development

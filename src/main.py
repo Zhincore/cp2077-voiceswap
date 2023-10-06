@@ -101,13 +101,6 @@ parser_isolate_vocals.add_argument(
 # Revoice
 parser_revoice = subcommands.add_parser(
     "revoice", help="Run RVC over given folder.")
-parser_revoice.add_argument(
-    "input",
-    type=str,
-    help="Path to folder of files to split.",
-    default=config.WW2OGG_OUTPUT,
-    nargs=argparse.OPTIONAL,
-)
 # Copied over from https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/tools/infer_batch_rvc.py
 parser_revoice.add_argument(
     "--f0up_key",
@@ -140,7 +133,7 @@ parser_revoice.add_argument(
 parser_revoice.add_argument(
     "--model_name",
     type=str,
-    help="store in assets/weight_root",
+    help="Model'S filename in assets/weights folder",
     required=True
 )
 parser_revoice.add_argument(
@@ -162,26 +155,24 @@ parser_revoice.add_argument(
 parser_revoice.add_argument(
     "--filter_radius",
     type=int,
-    default=3,
     help="filter radius",
 )
 parser_revoice.add_argument(
     "--resample_sr",
     type=int,
-    default=0,
-    help="resample sr",
+    help="resample sr, causes issues in current RVC's versions",
 )
 parser_revoice.add_argument(
     "--rms_mix_rate",
     type=float,
-    default=1,
-    help="rms mix rate",
+    default=0.05,
+    help="rms mix rate, I think this is the volume envelope stuff? The higher the more constant volume, the lower the more original volume.",
 )
 parser_revoice.add_argument(
     "--protect",
     type=float,
     default=0.4,
-    help="protect",
+    help="protect soundless vowels or something, 0.5 = disabled",
 )
 
 
@@ -233,7 +224,9 @@ async def isolate_vocals(args=None):
 async def revoice(args=None):
     """Run RVC over given folder."""
     args = args or parser_revoice.parse_args(sys.argv[1:])
-    await rvc.revoice(**args)
+    rest_args = dict(args.__dict__)
+    del rest_args["subcommand"]
+    await rvc.batch_rvc(**rest_args)
 
 if __name__ == "__main__":
     asyncio.run(main())

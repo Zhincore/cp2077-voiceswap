@@ -52,7 +52,7 @@ async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_
                 f"Converting files failed with exit code {result}")
 
 
-async def batch_rvc(input_path: str, output_path: str, **kwargs):
+async def batch_rvc(input_path: str, opt_path: str, **kwargs):
     cwd = os.getcwd()
 
     # find paths that contain files
@@ -61,16 +61,22 @@ async def batch_rvc(input_path: str, output_path: str, **kwargs):
             continue
 
         path = root[len(input_path)+1:]
+        input_path = os.path.join(cwd, input_path, path)
+        opt_path = os.path.join(cwd, opt_path, path)
+
+        kwargs["input_path"] = input_path
+        kwargs["opt_path"] = opt_path
+
+        os.makedirs(opt_path, exist_ok=True)
+
         print(f"Starting RVC for {path}...")
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
             "tools\\infer_batch_rvc.py",
-            "--input_path", os.path.join(cwd, input_path, path),
-            "--output_path", os.path.join(cwd, output_path, path),
-            *chain(*(("--"+k, v) for k, v in kwargs.items())),
+            *chain(*(("--" + k, str(v))
+                   for k, v in kwargs.items() if v is not None)),
             cwd=os.getenv("RVC_PATH"),
-            # stderr=asyncio.subprocess.DEVNULL,  # it's primarily ffmpeg spam
         )
         result = await process.wait()
 
