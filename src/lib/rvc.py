@@ -81,16 +81,16 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
     for path in paths:
         tqdm.write(f"Starting RVC for folder '{path}'...")
 
-        input_path = os.path.join(cwd, input_path, path)
-        opt_path = os.path.join(cwd, opt_path, path)
+        _input_path = os.path.join(cwd, input_path, path)
+        _opt_path = os.path.join(cwd, opt_path, path)
 
         os.makedirs(opt_path, exist_ok=True)
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
             "tools\\infer_batch_rvc.py",
-            "--input_path", input_path,
-            "--opt_path", opt_path,
+            "--input_path", _input_path,
+            "--opt_path", _opt_path,
             *args,
             cwd=os.getenv("RVC_PATH"),
         )

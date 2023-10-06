@@ -14,7 +14,9 @@ requires-python = ">=3.7"
 dependencies  = [
   "asyncio",
   "python-dotenv",
-  "tqdm"
+  "tqdm",
+  "waapi-client",
+  "nest-asyncio"
 ]
 
 [project.optional-dependencies]

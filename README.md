@@ -24,11 +24,14 @@ Using WolvenKit for modding and RVC for voice conversion.
 2. Convert them from .wem to a usable format (ww2ogg)
 3. Separate voice and effects (RVC)
 4. Convert to wanted voice (RVC)
-5. Merge the new voice and effects (FFmpeg) **WIP**
-6. Convert the voice lines back to .wem (WWise) **TODO**
+5. Merge the new voice and effects (FFmpeg)
+6. Convert the voice lines back to .wem (WWise) **WIP**
 7. Pack the new lines as a mod (WolvenKit) **TODO**
 
 ## TODO
+
+- Preserve folders over wwise conversion (fix the current renaming behavior)
+- Refactor the Wwise conversion function
 
 [ ] Projects? e.g. separated cache folders and saved settings for phases
 

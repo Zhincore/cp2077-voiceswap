@@ -7,6 +7,7 @@ import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
+import lib.wwise as wwise
 import config
 
 load_dotenv(".env")
@@ -200,6 +201,33 @@ parser_merge_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 
+# wwise_import
+parser_wwise_ = subcommands.add_parser(
+    "wwise_import",
+    help="Import all found audio files to Wwise and runs conversion."
+)
+parser_wwise_.add_argument(
+    "input",
+    type=str,
+    help="Path to folder of files to import.",
+    default=config.MERGED_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+parser_wwise_.add_argument(
+    "project",
+    type=str,
+    help="The Wwise project to use.",
+    default=config.WWISE_PROJECT,
+    nargs=argparse.OPTIONAL,
+)
+parser_wwise_.add_argument(
+    "output",
+    type=str,
+    help="Where to move the converted files.",
+    default=config.WWISE_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
 
 async def main():
     """Main function of the program."""
@@ -220,6 +248,8 @@ async def main():
         await revoice(args)
     elif args.subcommand == "merge_vocals":
         await merge_vocals(args)
+    elif args.subcommand == "wwise_import":
+        await wwise_import(args)
     else:
         # TODO: Default command
         ...
@@ -260,6 +290,13 @@ async def merge_vocals(args=None):
     """Merge vocals with effects."""
     args = args or parser_merge_vocals.parse_args(sys.argv[1:])
     await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path)
+
+
+async def wwise_import(args=None):
+    """Import all found audio files to Wwise and runs conversion."""
+    args = args or parser_wwise_import.parse_args(sys.argv[1:])
+    await wwise.convert_files(args.input, args.project, args.output)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
