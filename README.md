@@ -28,6 +28,10 @@ Using WolvenKit for modding and RVC for voice conversion.
 6. Convert the voice lines back to .wem (WWise) **TODO**
 7. Pack the new lines as a mod (WolvenKit) **TODO**
 
+## TODO
+
+[ ] Projects? e.g. separated cache folders and saved settings for phases
+
 ## Installation
 
 1. Install [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) to a folder of your choice.

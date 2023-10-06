@@ -175,6 +175,31 @@ parser_revoice.add_argument(
     help="protect soundless vowels or something, 0.5 = disabled",
 )
 
+# Merge vocals
+parser_merge_vocals = subcommands.add_parser(
+    "merge_vocals", help="Merge vocals with effects.")
+parser_merge_vocals.add_argument(
+    "vocals_path",
+    type=str,
+    help="Path to folder of vocals.",
+    default=config.RVC_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+parser_merge_vocals.add_argument(
+    "others_path",
+    type=str,
+    help="Path to folder of effects.",
+    default=config.UVR_OUTPUT_REST,
+    nargs=argparse.OPTIONAL,
+)
+parser_merge_vocals.add_argument(
+    "output_path",
+    type=str,
+    help="Path where to output the merged files.",
+    default=config.MERGED_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
 
 async def main():
     """Main function of the program."""
@@ -193,6 +218,8 @@ async def main():
         await isolate_vocals(args)
     elif args.subcommand == "revoice":
         await revoice(args)
+    elif args.subcommand == "merge_vocals":
+        await merge_vocals(args)
     else:
         # TODO: Default command
         ...
@@ -227,6 +254,12 @@ async def revoice(args=None):
     rest_args = dict(args.__dict__)
     del rest_args["subcommand"]
     await rvc.batch_rvc(**rest_args)
+
+
+async def merge_vocals(args=None):
+    """Merge vocals with effects."""
+    args = args or parser_merge_vocals.parse_args(sys.argv[1:])
+    await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path)
 
 if __name__ == "__main__":
     asyncio.run(main())

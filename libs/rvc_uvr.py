@@ -24,17 +24,11 @@ def main():
     paths = []
     agg = 0
     format0 = "wav"
-    total_count = argv[5] if len(argv) > 5 else "?"
 
     last_info_len = 0
-    lines = 0
     for info in uvr(model_name, inp_root, save_root_vocal, paths, save_root_ins, agg, format0):
-        lines = info.count("\n")+1
-
         print(info[last_info_len:])
-        print(f"{lines}/{total_count} files done")
-
-        last_info_len = len(info) + 1
+        last_info_len = len(info)+1
 
 
 if __name__ == "__main__":

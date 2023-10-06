@@ -22,36 +22,21 @@ async def ww2ogg(source: str, output: str):
 
 async def ww2ogg_all(input_path: str, output_path: str):
     """Converts all .wem files to .wav files"""
-    parallel = Parallel()
-    processes = []
-    done = 0
+    parallel = Parallel("Exporting .wem files")
 
-    async def process(root: str, name: str):
-        nonlocal done
-        print(f"Converting {name}...")
+    async def process(path: str, name: str):
+        input_file = os.path.join(input_path, path, name)
+        output_file = os.path.join(output_path, path, name[:-len(".wem")])
 
-        output_file = os.path.join(
-            output_path + root[len(input_path):],
-            name[:-4]
-        )
-
-        await ww2ogg(os.path.join(root, name), output_file+".ogg")
-
-        done += 1
-
-        print(f"Done converting {name}!")
-        print(f"{done}/{len(processes)} files converted")
+        await ww2ogg(input_file, output_file+".ogg")
 
     for root, _dirs, files in os.walk(input_path):
-        os.makedirs(output_path + root[len(input_path):], exist_ok=True)
+        path = root[len(input_path)+1:]
+        os.makedirs(os.path.join(output_path, path), exist_ok=True)
 
         for name in files:
             if name.endswith(".wem"):
-                processes.append(
-                    asyncio.create_task(
-                        parallel.run(process, root, name)
-                    )
-                )
+                parallel.run(process, path, name)
 
-    await asyncio.gather(*processes)
-    print("Converting done!")
+    await parallel.wait()
+    print("Exporting done!")

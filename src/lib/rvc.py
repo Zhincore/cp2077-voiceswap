@@ -1,7 +1,8 @@
 import os
 import asyncio
 from itertools import chain
-from util import SubprocessException
+from util import SubprocessException, find_paths_with_files
+from tqdm import tqdm
 
 
 async def poetry_get_venv(path: str):
@@ -24,15 +25,14 @@ async def get_rvc_executable():
 
 
 async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_path: str):
+    """Splits audio files to vocals and the rest."""
+
     cwd = os.getcwd()
+    paths, total = find_paths_with_files(input_path)
+    pbar = tqdm(total=total, desc="Isolating vocals", unit="file")
 
-    # find paths that contain files
-    for root, _dirs, files in os.walk(input_path):
-        if len(files) == 0:
-            continue
-
-        path = root[len(input_path)+1:]
-        print(f"Starting UVR for {path}...")
+    for path in paths:
+        tqdm.write(f"Starting UVR for folder '{path}'...")
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
@@ -41,41 +41,57 @@ async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_
             os.path.join(cwd, input_path, path),
             os.path.join(cwd, output_vocals_path, path),
             os.path.join(cwd, output_rest_path, path),
-            str(len(files)),
             cwd=os.getenv("RVC_PATH"),
-            stderr=asyncio.subprocess.DEVNULL,  # it's primarily ffmpeg spam
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,  # usually just ffmpeg spam...
         )
+
+        while not process.stdout.at_eof():
+            line = b""
+            try:
+                line = await asyncio.wait_for(process.stdout.readline(), 5)
+            except asyncio.TimeoutError:
+                pbar.update(0)
+
+            decoded = line.decode()
+            stripped = decoded.strip()
+
+            if stripped.endswith("->Success"):
+                pbar.update(1)
+            elif stripped != "":
+                tqdm.write(decoded)
+
         result = await process.wait()
 
         if result != 0:
             raise SubprocessException(
                 f"Converting files failed with exit code {result}")
 
+    pbar.close()
+
 
 async def batch_rvc(input_path: str, opt_path: str, **kwargs):
+    """Run RVC over given folder."""
+
     cwd = os.getcwd()
+    paths, _total = find_paths_with_files(input_path)
+    args = chain(*(("--" + k, str(v))
+                   for k, v in kwargs.items() if v is not None))
 
-    # find paths that contain files
-    for root, _dirs, files in os.walk(input_path):
-        if len(files) == 0:
-            continue
+    for path in paths:
+        tqdm.write(f"Starting RVC for folder '{path}'...")
 
-        path = root[len(input_path)+1:]
         input_path = os.path.join(cwd, input_path, path)
         opt_path = os.path.join(cwd, opt_path, path)
 
-        kwargs["input_path"] = input_path
-        kwargs["opt_path"] = opt_path
-
         os.makedirs(opt_path, exist_ok=True)
-
-        print(f"Starting RVC for {path}...")
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
             "tools\\infer_batch_rvc.py",
-            *chain(*(("--" + k, str(v))
-                   for k, v in kwargs.items() if v is not None)),
+            "--input_path", input_path,
+            "--opt_path", opt_path,
+            *args,
             cwd=os.getenv("RVC_PATH"),
         )
         result = await process.wait()
