@@ -21,7 +21,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 1. Unpack wanted voice lines from the game (WolvenKit)
 2. Convert them from .wem to a usable format (ww2ogg)
 3. Separate voice and effects (RVC)
-4. Convert to wanted voice (RVC) **TODO**
+4. Convert to wanted voice (RVC) **WIP**
 5. Merge the new voice and effects (FFmpeg) **TODO**
 6. Convert the voice lines back to .wem (WWise) **TODO**
 7. Pack the new lines as a mod (WolvenKit) **TODO**
@@ -61,15 +61,21 @@ Use the following arguments to configure that process:
 If you want to run only a specific phase of the process, you can use the following subcommands.
 These can be used either as `voiceswap <subcommand> (...arguments...)` or directly as `<subcommand> (...arguments...)` without the voiceswap prefix.
 
-Use `<subcommand> -h` to display help, which will tell you more about the parameters.
+**Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
+This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.  
+Use `<subcommand> -h` to display better detailed help.
 
-- **Phase 1:** `extract_files <regex>` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
+- **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
   - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
   - This usually takes few a minutes, depending on the number of files and drive speed.
 - **Phase 2:** `export_wem` - Converts all .wem files in `.cache/archive` to a usable format in `.cache/raw`.
   - This usually takes a few minutes, too.
-- **Phase 3:** `isolate_vocals` - Splits audio files to vocals and effects.
+- **Phase 3:** `isolate_vocals` - Splits audio files in `.cache/raw` to vocals and effects in `.cache/split`.
   - This may take a few hours on V's voicelines, this is probably the longest phase.
+  - It is done to preserve reverb and other effects, otherise the AI will make the effects by "mouth" and that's awful.
+- **Phase 4:** `revoice --model_name <model> [--index_path <index_path>]` - Processes audio files in `.cache/split/vocals` with given voice model and ouputs to `.cache/voiced`.
+  - Example: `revoice --model_name arianagrandev2 --index_path logs/arianagrandev2.index`
+  - This may take approximately an hour on V's voicelines.
 
 ## Development
 

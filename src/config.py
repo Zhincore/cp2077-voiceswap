@@ -1,6 +1,11 @@
-WOLVENKIT_OUTPUT = ".cache\\archive"
+CACHE_PATH = ".cache"
 
-WW2OGG_OUTPUT = ".cache\\raw"
+WOLVENKIT_OUTPUT = CACHE_PATH + "\\archive"
+
+WW2OGG_OUTPUT = CACHE_PATH + "\\raw"
 
 UVR_MODEL = "onnx_dereverb_By_FoxJoy"
-UVR_OUTPUT = ".cache\\split"
+UVR_OUTPUT_VOCALS = CACHE_PATH + "\\split\\vocals"
+UVR_OUTPUT_REST = CACHE_PATH + "\\split\\rest"
+
+RVC_OUTPUT = CACHE_PATH + "\\voiced"
