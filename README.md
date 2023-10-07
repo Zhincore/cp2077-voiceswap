@@ -6,7 +6,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 ## Requirements
 
 - Windows 10 or later _(unfortunately)_
-- Python 3.7 or later
+- Python 3.8 or later
 - Cyberpunk 2077
 - [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md)
 - [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise) **2019.2.15**
@@ -15,7 +15,12 @@ Using WolvenKit for modding and RVC for voice conversion.
 - At least 20 GB of free disk space, 25 GB if you're going for V's voicelines
   - This is including ~16GB RVC
 
-**Highly recommended:** a good GPU with up-to-date drivers and installed [CUDA **11**](https://developer.nvidia.com/cuda-11-8-0-download-archive) for NVIDIA GPUs.
+### Highly recommended:
+
+- [git](https://git-scm.com/downloads)
+- [Poetry](https://python-poetry.org/docs/) - for easier installing and running of RVC
+- GPU with up-to-date drivers - on CPU the process will take much longer
+  - For NVIDIA make sure to instal [CUDA **11.7**](https://developer.nvidia.com/cuda-11-8-0-download-archive) or 11.8
 
 ## Goals
 
@@ -33,37 +38,77 @@ Using WolvenKit for modding and RVC for voice conversion.
 - Preserve folders over wwise conversion (fix the current renaming behavior)
 - Refactor the Wwise conversion function
 
-[ ] Projects? e.g. separated cache folders and saved settings for phases
+- [ ] Projects? e.g. separated cache folders and saved settings for phases
+- [ ] Allow main command to run from a specific phase.
 
 ## Installation
 
-1. Install [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) to a folder of your choice.
-   - The linked README isn't very clear and I am not sure how I got it working either so... good luck.
-   - Either use poetry or create a venv to use with pip.
-   - In addition to RVC's installation also run `poetry add onnxruntime` or `pip install onnxruntime` (depending on which one you used previously).
-     - **TIP:** If you use CUDA, replace `onnxruntime` with `onnxruntime-gpu` for improved performance.
-   - Find and download the voice model you want to use.
-     - Place your `.pth` files in `assets/weights/` and your `.index` files in `logs/`.
-     - Make sure both files have sensible names, they usually don't; rename them if needed.
-2. Install [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise):
-   1. Install their launcher.
-   2. Using the launcher, install Wwise version **2019.2.15**, other versions don't seem to work with Cyberpunk.
-3. Install this project:
-   1. Clone this repository (e.g. `git clone https://github.com/zhincore/cp2077-voiceswap` or download it as a zip and unpack).
-   2. Go to the projects's folder (e.g. `cd cp2077-voiceswap`).
-   3. Run `install.ps1` to install the project and dependencies.
-   4. Create a file named `.env`, use `.env.example` as a template and configure it for your setup.
+### 1. Install RVC
+
+[RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) is a tool for converting voices using AI.
+
+The linked README isn't very clear so I'll try to write the basic steps.
+Choose whether you want to use [Poetry](https://python-poetry.org/docs/) or just pip, I'll try to describe both options.
+
+1. Clone the [linked repository](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI) or download it as zip and unpack.
+2. **If you use pip,** create a virtual environment using `py -m venv venv` and activate it using `.\.venv\Scripts\activate`.
+3. Install base dependencies:
+   - **Poetry:** `poetry install`.
+   - **Pip:** Choose the right command for your machine in the [`You can also use pip to install them:` section](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md).
+4. Install the correct Torch for your system, _if you plan to use CPU only you can skip this step_:
+   - Visit [PyTorch's documentation](https://pytorch.org/get-started/locally/), choose Stable, your OS, pip, Python and lastly choose either CUDA 11.8 or ROCm.
+   - **With Poetry** run the generated command like `poetry run <command>`.
+   - **With Pip** run the command directly.
+5. Install onnxruntime:
+   - **Poetry:** `poetry install onnxruntime`
+   - **With Pip:** `pip install onnxruntime`
+   - **If you use GPU** replace `onnxruntime` with `onnxruntime-gpu` in the above command for better performance!
+6. Download the required models:
+   - **Poetry:** `poetry run python tools/download_models.py`
+   - **Pip:** `python tools/download_models.py`
+7. Try to start the WebUI:
+   - **Poetry:** `poetry run python infer-web.py`
+   - **Pip:** `python infer-web.py`
+
+**Note:** Intel ARC and AMD ROCm have some extra instructions in the [RVC's README](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md).
+
+If everything went correctly, the RVC should boot up and show you a page in your browser. You can now close the page and press `Ctrl+C` in the console to quit the script.
+
+You will need the location where you installed RVC later.
+
+#### Installing Voice Models
+
+There are many voice models available online, they usually ship as a zip of two or three files:
+
+- `.pth` file - place it in RVC's `assets/weights/` folder.
+- `.index` file - place it in RVC's `logs/` folder.
+- I haven't figured out the third one, but it seems uncommon and not needed.
+- Make sure both files have sensible names, they usually don't; rename them if needed.
+
+### 2. Install Wwise
+
+[Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise) is a free enterprise-level suite for processing audio for games.
+
+1. Install their launcher.
+2. Using the launcher, install Wwise version **2019.2.15**, other versions don't seem to work with Cyberpunk.
+
+The program looks kind of scary, it's a professional tool.
+But don't worry, this script will do everything for you.
+
+### 3. Install this project:
+
+1.  Clone this repository (e.g. `git clone https://github.com/zhincore/cp2077-voiceswap` or download it as a zip and unpack).
+2.  Go to the projects's folder (e.g. `cd cp2077-voiceswap`).
+3.  Run `install.ps1` to install the project and dependencies.
+4.  Copy or rename file `.env.example` to `.env` and configure it for your setup.
+    The example file contains comments which will hopefully help you.
 
 ## Usage
 
-This project has to be used from the command line.
+Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
-Before running any of the commands, you must activate the venv using `.\.venv\Scripts\activate`!  
-If you've done everything correctly, the following commands should be available in the command line.
-Also make sure your `.env` file contains the correct paths.
-
-To start the whole automated process, use the command `voiceswap (...arguments...)`.
-This runs all phases specified later in sequential order without needing any further user input.  
+To start the whole automated process, use the command `voiceswap`.
+This runs all phases described later in a sequential order without needing any further user input.  
 Use the following arguments to configure that process:
 
 - **TODO**
@@ -71,7 +116,7 @@ Use the following arguments to configure that process:
 ### Subcommands / Phases
 
 If you want to run only a specific phase of the process, you can use the following subcommands.
-These can be used either as `voiceswap <subcommand> (...arguments...)` or directly as `<subcommand> (...arguments...)` without the voiceswap prefix.
+These can be used either as `voiceswap <subcommand>` or directly as `<subcommand>` without the voiceswap prefix.
 
 **Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
 This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.  
@@ -88,6 +133,12 @@ Use `<subcommand> -h` to display better detailed help.
 - **Phase 4:** `revoice --model_name <model> [--index_path <index_path>]` - Processes audio files in `.cache/split/vocals` with given voice model and ouputs to `.cache/voiced`.
   - Example: `revoice --model_name arianagrandev2.pth --index_path logs/arianagrandev2.index`
   - This may take approximately an hour on V's voicelines.
+- **Phase 5:** `merge_vocals` - Merge the new vocals with effects.
+  - This usually takes just a few seconds if you have strong CPU.
+- **Phase 6:** `wwise_import` - Import all found audio files to Wwise and runs conversion to .wem.
+  - **Warning:** This phase opens an automated Wwise window.  
+    If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
+  - This can take an hour or two on V's voicelines.
 
 ## Development
 

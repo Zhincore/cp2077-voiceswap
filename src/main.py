@@ -202,25 +202,25 @@ parser_merge_vocals.add_argument(
 )
 
 # wwise_import
-parser_wwise_ = subcommands.add_parser(
+parser_wwise_import = subcommands.add_parser(
     "wwise_import",
-    help="Import all found audio files to Wwise and runs conversion."
+    help="Import all found audio files to Wwise and runs conversion to .wem."
 )
-parser_wwise_.add_argument(
+parser_wwise_import.add_argument(
     "input",
     type=str,
     help="Path to folder of files to import.",
     default=config.MERGED_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
-parser_wwise_.add_argument(
+parser_wwise_import.add_argument(
     "project",
     type=str,
     help="The Wwise project to use.",
     default=config.WWISE_PROJECT,
     nargs=argparse.OPTIONAL,
 )
-parser_wwise_.add_argument(
+parser_wwise_import.add_argument(
     "output",
     type=str,
     help="Where to move the converted files.",
@@ -268,13 +268,13 @@ async def extract_files(args=None):
 
 async def export_wem(args=None):
     """Converts all cached .wem files to a usable format."""
-    args = args or parser_ww2ogg.parse_args(sys.argv[1:])
+    args = args or parser_export_wem.parse_args(sys.argv[1:])
     await ww2ogg.ww2ogg_all(args.input, args.output)
 
 
 async def isolate_vocals(args=None):
     """Splits audio files to vocals and the rest."""
-    args = args or parser_split.parse_args(sys.argv[1:])
+    args = args or parser_isolate_vocals.parse_args(sys.argv[1:])
     await rvc.uvr(args.model, args.input, args.output_vocals, args.output_rest)
 
 
