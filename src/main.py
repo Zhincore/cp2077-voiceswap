@@ -228,6 +228,19 @@ parser_wwise_import.add_argument(
     nargs=argparse.OPTIONAL,
 )
 
+# Pack files
+parser_pack_files = subcommands.add_parser(
+    "pack_files",
+    help="Packs files into a .archive."
+)
+parser_pack_files.add_argument(
+    "folder",
+    type=str,
+    help="The folder to pack.",
+    default=config.WWISE_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
 
 async def main():
     """Main function of the program."""
@@ -297,6 +310,11 @@ async def wwise_import(args=None):
     args = args or parser_wwise_import.parse_args(sys.argv[1:])
     await wwise.convert_files(args.input, args.project, args.output)
 
+
+async def pack_files(args=None):
+    """Pack given folder into a .archive"""
+    args = args or parser_pack_files.parse_args(sys.argv[1:])
+    await wolvenkit.pack_files(args.folder)
 
 if __name__ == "__main__":
     asyncio.run(main())

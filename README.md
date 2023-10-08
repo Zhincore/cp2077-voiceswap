@@ -31,7 +31,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 4. Convert to wanted voice (RVC)
 5. Merge the new voice and effects (FFmpeg)
 6. Convert the voice lines back to .wem (WWise) **WIP**
-7. Pack the new lines as a mod (WolvenKit) **TODO**
+7. Pack the new lines as a mod (WolvenKit) **WIP**
 
 ## TODO
 

@@ -26,3 +26,17 @@ async def extract_files(pattern: str, output_path: str):
         raise SubprocessException(
             "Extracting failed with exit code " + str(result))
     print("Extracting done!")
+
+async def pack_files(path: str):
+    """Pack given folder into a .archive"""
+    process = await asyncio.create_subprocess_exec(
+        ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
+        "pack",
+        "-p", path
+    )
+    result = await process.wait()
+
+    if result != 0:
+        raise SubprocessException(
+            "Packing failed with exit code " + str(result))
+    print("Packing done!")
