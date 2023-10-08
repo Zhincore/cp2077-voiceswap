@@ -36,7 +36,6 @@ Using WolvenKit for modding and RVC for voice conversion.
 ## TODO
 
 - Preserve folders over wwise conversion (fix the current renaming behavior)
-- Refactor the Wwise conversion function
 
 - [ ] Projects? e.g. separated cache folders and saved settings for phases
 - [ ] Allow main command to run from a specific phase.
@@ -122,6 +121,7 @@ These can be used either as `voiceswap <subcommand>` or directly as `<subcommand
 This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.  
 Use `<subcommand> -h` to display better detailed help.
 
+- `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
 - **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
   - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
   - This usually takes few a minutes, depending on the number of files and drive speed.

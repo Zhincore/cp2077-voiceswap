@@ -75,29 +75,11 @@ async def spawn_wwise(project: str):
         raise SubprocessException(
             f"Wwise server failed with exit code {result}")
 
-
-async def convert_files(input_path: str, project_path: str, output_path: str):
-    """Converts all files in the given folder to Wwise format."""
-    await create_project(project_path)
-
-    print("##############################################################")
-    print("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
-    print("#  The Wwise window will be fully automated, don't touch it! #")
-    print("##############################################################")
-    await asyncio.sleep(5)
-
-    #  Start the WAAPI server and wait a few seconds
-    server_spawn = spawn_wwise(project_path)
-    server = await anext(server_spawn)
-
-    # Try to estabilish connection
+async def create_waapi(server: asyncio.subprocess.Process):
     waapi = None
-
-    print("Trying to connect to Wwise...")
     while server.returncode is None:
         try:
             waapi = WaapiClient()
-            print("Connected!")
             break
         except CannotConnectToWaapiException as err:
             if server.returncode is not None:
@@ -106,6 +88,9 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     if waapi is None:
         raise CannotConnectToWaapiException()
 
+    return waapi
+
+async def wait_waapi_load(waapi: WaapiClient):
     info = waapi.call("ak.wwise.core.getInfo")
 
     if not info:
@@ -122,6 +107,42 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
             await asyncio.sleep(0.5)
         handler.unsubscribe()
 
+def move_wwise_files(converted_objects: list[dict], input_path: str, output_path: str):
+    for obj in tqdm(converted_objects, desc="Renaming files", unit="file"):
+        if obj["type"] != "Sound":
+            continue
+
+        # TODO: Use object path to restore folder structure
+        original_path = obj["sound:originalWavFilePath"]
+        path = os.path.join(output_path, original_path[len(input_path):])
+        filename = os.path.basename(original_path)[:-len(".wav")]
+
+        os.makedirs(path, exist_ok=True)
+        os.rename(obj["sound:convertedWemFilePath"],
+                  os.path.join(path, filename+".wem"))
+
+async def convert_files(input_path: str, project_path: str, output_path: str):
+    """Converts all files in the given folder to Wwise format."""
+    await create_project(project_path)
+
+    print("##############################################################")
+    print("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
+    print("#  The Wwise window will be fully automated, don't touch it! #")
+    print("##############################################################")
+    await asyncio.sleep(5)
+
+    #  Start the WAAPI server and wait a few seconds
+    server_spawn = spawn_wwise(project_path)
+    server = await anext(server_spawn)
+
+    # Try to estabilish connection
+    print("Trying to connect to Wwise...")
+    waapi = await create_waapi()
+    print("Connected!")
+
+    # Wait for load
+    wait_waapi_load(waapi)
+
     # Setup
     waapi.call("ak.wwise.debug.enableAutomationMode", {"enable": True})
 
@@ -129,11 +150,13 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     imports = []
 
     for root, _dirs, files in os.walk(input_path):
+        path = "\\".join("<Folder>"+s for s in root[len(input_path):].split('\\'))
+
         for file in files:
             if file.endswith(".wav"):
                 imports.append({
                     "audioFile": os.path.join(os.getcwd(), root, file),
-                    "objectPath": "\\Actor-Mixer Hierarchy\\Default Work Unit\\<Sound>"+file
+                    "objectPath": f"\\Actor-Mixer Hierarchy\\Default Work Unit\\{path}\\<Sound>{file}"
                 })
                 break
 
@@ -193,14 +216,4 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     await server.wait()
 
     # Move and rename files
-    for obj in tqdm(converted_objects, desc="Renaming files", unit="file"):
-        if obj["type"] != "Sound":
-            continue
-
-        original_path = obj["sound:originalWavFilePath"]
-        path = os.path.join(output_path, original_path[len(input_path):])
-        filename = os.path.basename(original_path)[:-len(".wav")]
-
-        os.makedirs(path, exist_ok=True)
-        os.rename(obj["sound:convertedWemFilePath"],
-                  os.path.join(path, filename+".wem"))
+    move_wwise_files(converted_objects, input_path, output_path)    
