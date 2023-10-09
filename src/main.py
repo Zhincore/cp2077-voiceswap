@@ -242,7 +242,7 @@ parser_pack_files.add_argument(
 )
 
 
-async def main():
+async def _main():
     """Main function of the program."""
 
     # Run subcommand
@@ -268,6 +268,11 @@ async def main():
     else:
         # TODO: Default command
         ...
+
+
+def main():
+    """Main function of the program."""
+    asyncio.run(_main())
 
 
 def clear_cache():

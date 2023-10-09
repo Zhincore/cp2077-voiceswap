@@ -107,16 +107,16 @@ But don't worry, this script will do everything for you.
 Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
 To run all phases described later in a sequential order without needing any further user input  
-use the command `voiceswap --model_name <model> [--index_path <index_path>] [pattern]`.
+use the command `python src/main.py --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
 The parameters have followign meanings:
 
-- `model` - The voice model to use, it has to be the name of a file in RVC's `assets/weights/`. Example: `arianagrandev2.pth`
-- `index_path` - Optional path to a voice index. Example: `logs/arianagrandev2.index`
+- `--model_name` - The voice model to use, it has to be the name of a file in RVC's `assets/weights/`. Example: `arianagrandev2.pth`
+- `--index_path` - Optional path to a voice index. Example: `logs/arianagrandev2.index`
+- `--f0up_key` - Optionally pitch shift the audio before converting, this is very useful when the original voice is deeper or higher than the new voice. 12 is one octave up, -12 is one octave down. You can experiment with this in the origin RVC WebUI
 - `pattern` - Regex pattern of voice lines to replace. Default is `v_(?!posessed).*_f_.*` which is all female V's lines but not Johnny-possessed ones.
-  - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$`,
-    this makes sure that
+  - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$` and is matched agains the full path in game's archive.
 
-Use command `voiceswap help` for more paramaters and information.
+Use command `python src/main.py help` for more paramaters and information.
 
 **Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
 This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.
@@ -124,9 +124,9 @@ This README only shows important parameters, other parameters have defaults that
 ### Subcommands / Phases
 
 If you want to run only a specific phase of the process, you can use the following subcommands.
-These can be used either as `voiceswap <subcommand>` or directly as `<subcommand>` without the voiceswap prefix.
+You can use these as `python src/main.py <subcommand>`.
 
-Use `<subcommand> -h` to display better detailed help.
+Use `python src/main.py <subcommand> -h` to display better detailed help.
 
 - `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
 - **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
@@ -137,9 +137,9 @@ Use `<subcommand> -h` to display better detailed help.
 - **Phase 3:** `isolate_vocals` - Splits audio files in `.cache/raw` to vocals and effects in `.cache/split`.
   - This may take a few hours on V's voicelines, this is probably the longest phase.
   - It is done to preserve reverb and other effects, otherise the AI will make the effects by "mouth" and that's awful.
-- **Phase 4:** `revoice --model_name <model> [--index_path <index_path>]` - Processes audio files in `.cache/split/vocals` with given voice model and ouputs to `.cache/voiced`.
-  - Example: `revoice --model_name arianagrandev2.pth --index_path logs/arianagrandev2.index`
-  - This may take approximately an hour on V's voicelines.
+- **Phase 4:** `revoice --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>]` - Processes audio files in `.cache/split/vocals` with given voice model and ouputs to `.cache/voiced`.
+  - Example: `revoice --model_name arianagrandev2.pth --index_path logs/arianagrandev2.index --f0up_key 4`
+  - This may take a few hours on V's voicelines.
 - **Phase 5:** `merge_vocals` - Merge the new vocals with effects.
   - This usually takes just a few seconds if you have strong CPU.
 - **Phase 6:** `wwise_import` - Import all found audio files to Wwise and runs conversion to .wem.

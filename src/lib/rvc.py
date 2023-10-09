@@ -84,7 +84,7 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
         _input_path = os.path.join(cwd, input_path, path)
         _opt_path = os.path.join(cwd, opt_path, path)
 
-        os.makedirs(opt_path, exist_ok=True)
+        os.makedirs(_opt_path, exist_ok=True)
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
