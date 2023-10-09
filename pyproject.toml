@@ -24,8 +24,14 @@ dev = ["isort", "autopep8"]
 
 [project.scripts]
 voiceswap = "main:main"
+clear_cache = "main:clear_cache"
 extract_files = "main:extract_files"
 export_wem = "main:export_wem"
+isolate_vocals = "main:isolate_vocals"
+revoice = "main:revoice"
+merge_vocals = "main:merge_vocals"
+wwise_imports= "main:wwise_import"
+pack_files = "main:pack_files"
 
 [project.urls]
 "Homepage" = "https://github.com/zhincore/cp2077-voiceswap"

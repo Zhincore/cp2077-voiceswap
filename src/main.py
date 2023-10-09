@@ -37,7 +37,7 @@ parser_extract_files.add_argument(
     "pattern",
     type=str,
     help="The file name regex pattern to match against.",
-    default="\\\\v_(?!posessed).*_f_.*\\.wem$",
+    default="v_(?!posessed).*_f_.*",
     nargs=argparse.OPTIONAL,
 )
 parser_extract_files.add_argument(
@@ -263,6 +263,8 @@ async def main():
         await merge_vocals(args)
     elif args.subcommand == "wwise_import":
         await wwise_import(args)
+    elif args.subcommand == "pack_files":
+        await pack_files(args)
     else:
         # TODO: Default command
         ...
@@ -276,7 +278,9 @@ def clear_cache():
 async def extract_files(args=None):
     """Extracts files from the game matching the given pattern."""
     args = args or parser_extract_files.parse_args(sys.argv[1:])
-    await wolvenkit.extract_files(args.pattern, args.output)
+
+    pattern = f"\\\\{args.pattern}\\.wem$"
+    await wolvenkit.extract_files(pattern, args.output)
 
 
 async def export_wem(args=None):
@@ -315,6 +319,7 @@ async def pack_files(args=None):
     """Pack given folder into a .archive"""
     args = args or parser_pack_files.parse_args(sys.argv[1:])
     await wolvenkit.pack_files(args.folder)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

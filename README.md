@@ -106,24 +106,31 @@ But don't worry, this script will do everything for you.
 
 Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
-To start the whole automated process, use the command `voiceswap`.
-This runs all phases described later in a sequential order without needing any further user input.  
-Use the following arguments to configure that process:
+To run all phases described later in a sequential order without needing any further user input  
+use the command `voiceswap --model_name <model> [--index_path <index_path>] [pattern]`.
+The parameters have followign meanings:
 
-- **TODO**
+- `model` - The voice model to use, it has to be the name of a file in RVC's `assets/weights/`. Example: `arianagrandev2.pth`
+- `index_path` - Optional path to a voice index. Example: `logs/arianagrandev2.index`
+- `pattern` - Regex pattern of voice lines to replace. Default is `v_(?!posessed).*_f_.*` which is all female V's lines but not Johnny-possessed ones.
+  - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$`,
+    this makes sure that
+
+Use command `voiceswap help` for more paramaters and information.
+
+**Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
+This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.
 
 ### Subcommands / Phases
 
 If you want to run only a specific phase of the process, you can use the following subcommands.
 These can be used either as `voiceswap <subcommand>` or directly as `<subcommand>` without the voiceswap prefix.
 
-**Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
-This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.  
 Use `<subcommand> -h` to display better detailed help.
 
 - `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
 - **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
-  - Example: `extract_files "\\v_(?!posessed).*_f_.*\.wem$"` extracts all female V's voicelines without Johnny-possessed ones.
+  - Example: `extract_files "v_(?!posessed).*_f_.*"` extracts all female V's voicelines without Johnny-possessed ones (default).
   - This usually takes few a minutes, depending on the number of files and drive speed.
 - **Phase 2:** `export_wem` - Converts all .wem files in `.cache/archive` to a usable format in `.cache/raw`.
   - This usually takes a few minutes, too.
@@ -139,6 +146,8 @@ Use `<subcommand> -h` to display better detailed help.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
   - This can take an hour or two on V's voicelines.
+- **Phase 7:** `pack_files` - Packs the files into a .archive.
+  - This final step should be quick.
 
 ## Development
 
