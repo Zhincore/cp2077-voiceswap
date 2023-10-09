@@ -240,6 +240,25 @@ parser_pack_files.add_argument(
     default=config.WWISE_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
+parser_pack_files.add_argument(
+    "output",
+    type=str,
+    help="Where to put the pack.",
+    default=config.PACKED_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+# Zip folder
+parser_zip = subcommands.add_parser(
+    "zip",
+    help="Packs files into a .archive."
+)
+parser_zip.add_argument(
+    "folder",
+    type=str,
+    help="The folder to zip.",
+    default=config.PACKED_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
 
 
 async def _main():
@@ -323,7 +342,13 @@ async def wwise_import(args=None):
 async def pack_files(args=None):
     """Pack given folder into a .archive"""
     args = args or parser_pack_files.parse_args(sys.argv[1:])
-    await wolvenkit.pack_files(args.folder)
+    await wolvenkit.pack_files(args.folder, args.output)
+
+
+def zip(args=None):
+    """Zips given folder for distribution"""
+    args = args or parser_zip.parse_args(sys.argv[1:])
+    shutil.make_archive("voiceswap.zip", "zip", args.folder)
 
 
 if __name__ == "__main__":

@@ -30,8 +30,9 @@ Using WolvenKit for modding and RVC for voice conversion.
 3. Separate voice and effects (RVC)
 4. Convert to wanted voice (RVC)
 5. Merge the new voice and effects (FFmpeg)
-6. Convert the voice lines back to .wem (WWise) **WIP**
-7. Pack the new lines as a mod (WolvenKit) **WIP**
+6. Convert the voice lines back to .wem (WWise)
+7. Pack the new lines as an .archive (WolvenKit)
+8. Zip the mod for distribution **TODO**
 
 ## TODO
 
@@ -146,8 +147,10 @@ Use `python src/main.py <subcommand> -h` to display better detailed help.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
   - This can take an hour or two on V's voicelines.
-- **Phase 7:** `pack_files` - Packs the files into a .archive.
-  - This final step should be quick.
+- **Phase 7:** `pack_files` - Packs the files into a `.archive`.
+  - Should be pretty quick.
+- **Phase 8:** `zip` - Zips the resulting files for distribution.
+  - This final step should be nearly instant, too.
 
 ## Development
 

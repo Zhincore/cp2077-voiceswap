@@ -14,3 +14,5 @@ MERGED_OUTPUT = CACHE_PATH + "\\merged"
 
 WWISE_PROJECT = CACHE_PATH + "\\wwise_project\\wwise_project.wproj"
 WWISE_OUTPUT = CACHE_PATH + "\\complete"
+
+PACKED_OUTPUT = CACHE_PATH + "\\packed"

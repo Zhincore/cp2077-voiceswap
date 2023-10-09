@@ -31,7 +31,7 @@ async def extract_files(pattern: str, output_path: str):
     print("Extracting done!")
 
 
-async def pack_files(path: str):
+async def pack_files(path: str, output: str):
     """Pack given folder into a .archive"""
     print("Starting WolvenKit...")
 
@@ -45,4 +45,11 @@ async def pack_files(path: str):
     if result != 0:
         raise SubprocessException(
             "Packing failed with exit code " + str(result))
+
+    basename = os.path.basename(path)
+    dirname = os.path.dirname(path)
+    result_path = os.path.join(dirname, basename+".archive")
+    output_path = os.path.join(output, "archive\\pc\\mod\\voiceswap.archive")
+    os.makedirs(output_path, exist_ok=True)
+    os.rename(result_path, output_path)
     print("Packing done!")
