@@ -2,10 +2,14 @@ import asyncio
 import os
 import re
 from tqdm import tqdm
+from threading import Thread
+from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from waapi import WaapiClient, CannotConnectToWaapiException, AsyncioLoopExecutor
-from util import SubprocessException
+from util import SubprocessException, watch_async
 import nest_asyncio
 nest_asyncio.apply()  # needed for waapi
+
+WWISE_OBJECT_PATH = "\\Actor-Mixer Hierarchy\\Default Work Unit\\"
 
 
 def get_wwise_path():
@@ -75,6 +79,7 @@ async def spawn_wwise(project: str):
         raise SubprocessException(
             f"Wwise server failed with exit code {result}")
 
+
 async def create_waapi(server: asyncio.subprocess.Process):
     waapi = None
     while server.returncode is None:
@@ -90,58 +95,41 @@ async def create_waapi(server: asyncio.subprocess.Process):
 
     return waapi
 
+
 async def wait_waapi_load(waapi: WaapiClient):
-    info = waapi.call("ak.wwise.core.getInfo")
+    """Wait until the WAAPI server is loaded."""
 
-    if not info:
-        # Wait for load
-        loaded = False
+    print("Waiting for Wwise to load...")
+    # The 'loaded' event was unreliable
+    while not waapi.call("ak.wwise.core.getInfo"):
+        await asyncio.sleep(0.5)
 
-        def on_loaded(*args, **kwargs):
-            nonlocal loaded
-            loaded = True
 
-        handler = waapi.subscribe("ak.wwise.core.project.loaded", on_loaded)
-        print("Waiting for Wwise to load...")
-        while not loaded:
-            await asyncio.sleep(0.5)
-        handler.unsubscribe()
+def move_wwise_files(converted_objects: list[dict], output_path: str):
+    """Moves all Wwise files to the given output folder and renames them correctly."""
 
-def move_wwise_files(converted_objects: list[dict], input_path: str, output_path: str):
-    for obj in tqdm(converted_objects, desc="Renaming files", unit="file"):
-        if obj["type"] != "Sound":
-            continue
+    for obj in tqdm([x for x in converted_objects if x["type"] == "Sound"], desc="Renaming files", unit="file"):
 
-        # TODO: Use object path to restore folder structure
         original_path = obj["sound:originalWavFilePath"]
-        path = os.path.join(output_path, original_path[len(input_path):])
         filename = os.path.basename(original_path)[:-len(".wav")]
 
-        os.makedirs(path, exist_ok=True)
-        os.rename(obj["sound:convertedWemFilePath"],
-                  os.path.join(path, filename+".wem"))
+        path = obj["path"][len(WWISE_OBJECT_PATH):-len(obj["name"])]
+        output_dir = os.path.join(output_path, path)
+        output = os.path.join(output_dir, filename+".wem")
 
-async def convert_files(input_path: str, project_path: str, output_path: str):
-    """Converts all files in the given folder to Wwise format."""
-    await create_project(project_path)
+        try:
+            os.makedirs(output_dir)
+        except OSError:
+            # Overwrite existing files
+            if os.path.exists(output):
+                os.unlink(output)
 
-    print("##############################################################")
-    print("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
-    print("#  The Wwise window will be fully automated, don't touch it! #")
-    print("##############################################################")
-    await asyncio.sleep(5)
+        os.rename(obj["sound:convertedWemFilePath"], output)
 
-    #  Start the WAAPI server and wait a few seconds
-    server_spawn = spawn_wwise(project_path)
-    server = await anext(server_spawn)
 
-    # Try to estabilish connection
-    print("Trying to connect to Wwise...")
-    waapi = await create_waapi()
-    print("Connected!")
-
+async def _convert_files(input_path: str, project_path: str, output_path: str, waapi):
     # Wait for load
-    wait_waapi_load(waapi)
+    await wait_waapi_load(waapi)
 
     # Setup
     waapi.call("ak.wwise.debug.enableAutomationMode", {"enable": True})
@@ -150,18 +138,19 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     imports = []
 
     for root, _dirs, files in os.walk(input_path):
-        path = "\\".join("<Folder>"+s for s in root[len(input_path):].split('\\'))
+        path = "\\".join(
+            "<Folder>"+s for s in root[len(input_path):].split('\\') if s)
 
         for file in files:
             if file.endswith(".wav"):
                 imports.append({
                     "audioFile": os.path.join(os.getcwd(), root, file),
-                    "objectPath": f"\\Actor-Mixer Hierarchy\\Default Work Unit\\{path}\\<Sound>{file}"
+                    "objectPath": os.path.join(WWISE_OBJECT_PATH, path, "<Sound>"+file),
                 })
-                break
 
     # Listen for imports
-    pbar = tqdm(total=len(imports), desc="Importing files to Wwise")
+    pbar = tqdm(total=len(imports),
+                desc="Importing files to Wwise", unit="file")
 
     def on_object_created(*args, **kwargs):
         if kwargs["object"]["type"] == "AudioFileSource":
@@ -177,11 +166,20 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     imported = waapi.call("ak.wwise.core.audio.import", {
         "importOperation": "replaceExisting",
         "imports": imports,
-    })
+    })["objects"]
 
     # Done
     pbar.close()
     handler.unsubscribe()
+
+    # Create convert thread
+    convert_thread = Thread(
+        target=waapi.call,
+        args=("ak.wwise.ui.commands.execute", {
+            "command": "ConvertAllPlatform",
+            "objects": [obj["id"] for obj in imported],
+        })
+    )
 
     #  Listen to converting
     converted_objects = []
@@ -194,26 +192,64 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     handler = waapi.subscribe(
         "ak.wwise.ui.commands.executed",
         on_converted,
-        {"return": ["type", "id", "name", "sound:originalWavFilePath",
+        {"return": ["type", "path", "name", "sound:originalWavFilePath",
                     "sound:convertedWemFilePath"]}
     )
 
+    project_dir = os.path.dirname(project_path)
+    cache_dir = os.path.join(project_dir, ".cache")
+    event_queue, observer = watch_async(cache_dir, recursive=True)
+
+    pbar = tqdm(desc="Converting files", total=len(imports), unit="file")
+
     # Start converting
-    print("Beginning conversion, progress can be watched in the Wwise window...")
-    waapi.call("ak.wwise.ui.commands.execute", {
-        "command": "ConvertAllPlatform",
-        "objects": [obj["id"] for obj in imported["objects"]],
-    })
+    convert_thread.start()
+    # Print progress while converting
+    while convert_thread.is_alive():
+        try:
+            event = event_queue.get_nowait()
+            if event.src_path.endswith(".wem"):
+                pbar.update(1)
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.1)
 
     # Done
-    print("Conversion done.")
+    observer.stop()
+    pbar.close()
     handler.unsubscribe()
 
-    # Close the WAAPI server
-    print("Closing Wwise...")
-    waapi.disconnect()
-    server.terminate()
-    await server.wait()
-
     # Move and rename files
-    move_wwise_files(converted_objects, input_path, output_path)    
+    move_wwise_files(converted_objects, output_path)
+
+    print("Conversion done!")
+
+
+async def convert_files(input_path: str, project_path: str, output_path: str):
+    """Converts all files in the given folder to Wwise format."""
+    await create_project(project_path)
+
+    print("##############################################################")
+    print("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
+    print("#  The Wwise window will be fully automated, don't touch it! #")
+    print("##############################################################")
+    await asyncio.sleep(5)
+
+    #  Start the WAAPI server
+    server_spawn = spawn_wwise(project_path)
+    server = await anext(server_spawn)
+
+    # Try to estabilish connection
+    print("Trying to connect to Wwise...")
+    waapi = await create_waapi(server)
+    print("Connected!")
+
+    # Run the script
+    try:
+        await _convert_files(input_path, project_path, output_path, waapi)
+    finally:
+        # Close the WAAPI server
+        print("Closing Wwise...")
+        waapi.disconnect()
+        if server.returncode is None:
+            server.terminate()
+            await server.wait()

@@ -8,10 +8,13 @@ async def extract_files(pattern: str, output_path: str):
     """Extracts files from the game matching the given pattern."""
     game_path = os.getenv("CYBERPUNK_PATH")
 
+    # Find folders that arent mod
     folders = []
     for folder in os.listdir(game_path + "\\archive\\pc"):
         if folder != "mod":
             folders.append(("-p", f"{game_path}\\archive\\pc\\{folder}"))
+
+    print("Starting WolvenKit...")
 
     process = await asyncio.create_subprocess_exec(
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
@@ -27,8 +30,11 @@ async def extract_files(pattern: str, output_path: str):
             "Extracting failed with exit code " + str(result))
     print("Extracting done!")
 
+
 async def pack_files(path: str):
     """Pack given folder into a .archive"""
+    print("Starting WolvenKit...")
+
     process = await asyncio.create_subprocess_exec(
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
         "pack",

@@ -1,5 +1,6 @@
 import os
 from .parallel import Parallel
+from .async_watchdog import watch_async
 
 
 class SubprocessException(Exception):

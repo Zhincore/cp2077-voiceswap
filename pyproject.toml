@@ -16,7 +16,8 @@ dependencies  = [
   "python-dotenv",
   "tqdm",
   "waapi-client",
-  "nest-asyncio"
+  "nest-asyncio",
+  "watchdog"
 ]
 
 [project.optional-dependencies]

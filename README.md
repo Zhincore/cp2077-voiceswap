@@ -20,7 +20,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 - [git](https://git-scm.com/downloads)
 - [Poetry](https://python-poetry.org/docs/) - for easier installing and running of RVC
 - GPU with up-to-date drivers - on CPU the process will take much longer
-  - For NVIDIA make sure to instal [CUDA **11.7**](https://developer.nvidia.com/cuda-11-8-0-download-archive) or 11.8
+  - For NVIDIA make sure to instal [CUDA **11.8**](https://developer.nvidia.com/cuda-11-8-0-download-archive) or 11.7
 
 ## Goals
 
