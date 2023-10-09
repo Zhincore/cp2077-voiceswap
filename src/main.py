@@ -67,6 +67,7 @@ def zip(args: Namespace):
     """Zips given folder for distribution"""
     shutil.make_archive(args.archive+".zip", "zip", args.folder)
 
+
 async def _main():
     """Main function of the program."""
 
@@ -90,6 +91,9 @@ async def _main():
         await pack_files(args)
     elif args.subcommand == "zip":
         zip(args)
+    elif args.subcommand == "workflow":
+        from workflow import workflow
+        workflow(args)
     else:
         parser.print_help()
 

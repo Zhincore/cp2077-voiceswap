@@ -108,7 +108,7 @@ But don't worry, this script will do everything for you.
 Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
 To run all phases described later in a sequential order without needing any further user input  
-use the command `voiceswap [name] --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
+use the command `voiceswap workflow [name] --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
 The parameters have following meanings:
 
 - `name` - The name of the mod basically, will be used as archive name. Don't use spaces or special symbols. Example: `ArianaGrandeVO`, default is `voiceswap`
@@ -143,7 +143,7 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
   - Example: `revoice --model_name arianagrandev2.pth --index_path logs/arianagrandev2.index --f0up_key 4`
   - This may take a few hours on V's voicelines.
 - **Phase 5:** `merge_vocals` - Merge the new vocals with effects.
-  - This usually takes just a few seconds if you have strong CPU.
+  - This should take just a few minutes.
 - **Phase 6:** `wwise_import` - Import all found audio files to Wwise and runs conversion to .wem.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
