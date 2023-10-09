@@ -6,14 +6,14 @@ Using WolvenKit for modding and RVC for voice conversion.
 ## Requirements
 
 - Windows 10 or later _(unfortunately)_
-- Python 3.8 or later
+- Python 3.9 or later
 - Cyberpunk 2077
 - [RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md)
 - [Audiokinetic Wwise](https://www.audiokinetic.com/en/products/wwise) **2019.2.15**
 - FFmpeg (usually included in RVC WebUI)
 - Basic knowledge of PowerShell
-- At least 20 GB of free disk space, 25 GB if you're going for V's voicelines
-  - This is including ~16GB RVC
+- At least 35 GB of free disk space, 45 GB if you're going for V's voicelines
+  - This is including >12GB RVC
 
 ### Highly recommended:
 
@@ -108,16 +108,17 @@ But don't worry, this script will do everything for you.
 Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
 To run all phases described later in a sequential order without needing any further user input  
-use the command `python src/main.py --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
-The parameters have followign meanings:
+use the command `voiceswap [name] --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
+The parameters have following meanings:
 
+- `name` - The name of the mod basically, will be used as archive name. Don't use spaces or special symbols. Example: `ArianaGrandeVO`, default is `voiceswap`
 - `--model_name` - The voice model to use, it has to be the name of a file in RVC's `assets/weights/`. Example: `arianagrandev2.pth`
 - `--index_path` - Optional path to a voice index. Example: `logs/arianagrandev2.index`
 - `--f0up_key` - Optionally pitch shift the audio before converting, this is very useful when the original voice is deeper or higher than the new voice. 12 is one octave up, -12 is one octave down. You can experiment with this in the origin RVC WebUI
 - `pattern` - Regex pattern of voice lines to replace. Default is `v_(?!posessed).*_f_.*` which is all female V's lines but not Johnny-possessed ones.
   - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$` and is matched agains the full path in game's archive.
 
-Use command `python src/main.py help` for more paramaters and information.
+Use command `voiceswap help` for more paramaters and information.
 
 **Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
 This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.
@@ -125,9 +126,9 @@ This README only shows important parameters, other parameters have defaults that
 ### Subcommands / Phases
 
 If you want to run only a specific phase of the process, you can use the following subcommands.
-You can use these as `python src/main.py <subcommand>`.
+You can use these as `voiceswap <subcommand>`.
 
-Use `python src/main.py <subcommand> -h` to display better detailed help.
+Use `voiceswap <subcommand> -h` to display better detailed help.
 
 - `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
 - **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
@@ -147,9 +148,9 @@ Use `python src/main.py <subcommand> -h` to display better detailed help.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
   - This can take an hour or two on V's voicelines.
-- **Phase 7:** `pack_files` - Packs the files into a `.archive`.
+- **Phase 7:** `pack_files [archive_name]` - Packs the files into a `.archive`.
   - Should be pretty quick.
-- **Phase 8:** `zip` - Zips the resulting files for distribution.
+- **Phase 8:** `zip [archive_name]` - Zips the resulting files for distribution.
   - This final step should be nearly instant, too.
 
 ## Development
