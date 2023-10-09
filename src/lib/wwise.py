@@ -171,6 +171,7 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     # Done
     pbar.close()
     handler.unsubscribe()
+    waapi.call("ak.wwise.core.project.save")
 
     # Create convert thread
     convert_thread = Thread(
@@ -217,6 +218,7 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     observer.stop()
     pbar.close()
     handler.unsubscribe()
+    waapi.call("ak.wwise.core.project.save")
 
     # Move and rename files
     move_wwise_files(converted_objects, output_path)

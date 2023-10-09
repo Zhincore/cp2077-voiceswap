@@ -31,7 +31,7 @@ async def extract_files(pattern: str, output_path: str):
     print("Extracting done!")
 
 
-async def pack_files(archive:str, path: str, output: str):
+async def pack_files(archive: str, path: str, output: str):
     """Pack given folder into a .archive"""
     print("Starting WolvenKit...")
 
@@ -49,7 +49,11 @@ async def pack_files(archive:str, path: str, output: str):
     basename = os.path.basename(path)
     dirname = os.path.dirname(path)
     result_path = os.path.join(dirname, basename+".archive")
-    output_path = os.path.join(output, f"archive\\pc\\mod\\{archive}.archive")
+    output_path = os.path.join(output, "archive\\pc\\mod\\")
     os.makedirs(output_path, exist_ok=True)
-    os.rename(result_path, output_path)
+
+    output_file = os.path.join(output_path, archive+".archive")
+    if os.path.exists(output_file):
+        os.unlink(output_file)
+    os.rename(result_path, output_file)
     print("Packing done!")

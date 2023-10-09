@@ -65,7 +65,8 @@ async def pack_files(args: Namespace):
 
 def zip(args: Namespace):
     """Zips given folder for distribution"""
-    shutil.make_archive(args.archive+".zip", "zip", args.folder)
+    print("Zipping folder...")
+    shutil.make_archive(args.archive, "zip", args.folder)
 
 
 async def _main():
