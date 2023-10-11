@@ -14,11 +14,6 @@ from args import main as parser
 load_dotenv(".env")
 
 
-def main():
-    """Main function of the program."""
-    asyncio.run(_main())
-
-
 def clear_cache():
     """Deletes the .cache folder."""
     shutil.rmtree(config.CACHE_PATH)
@@ -50,12 +45,17 @@ async def revoice(args: Namespace):
 
 async def merge_vocals(args: Namespace):
     """Merge vocals with effects."""
-    await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path)
+    await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path, args.voice_vol, args.effect_vol)
 
 
 async def wwise_import(args: Namespace):
     """Import all found audio files to Wwise and runs conversion."""
     await wwise.convert_files(args.input, args.project, args.output)
+
+
+async def move_wwise_files(args: Namespace):
+    """Finds the converted files and tries to find their correct location."""
+    await wwise.move_wwise_files_auto(args.project, args.reference_path, args.output_path)
 
 
 async def pack_files(args: Namespace):
@@ -73,30 +73,42 @@ async def _main():
     """Main function of the program."""
 
     # Run subcommand
-    args = parser.parse_args(sys.argv[1:])
-    if args.subcommand == "clear_cache":
-        clear_cache()
-    elif args.subcommand == "extract_files":
-        await extract_files(args)
-    elif args.subcommand == "export_wem":
-        await export_wem(args)
-    elif args.subcommand == "isolate_vocals":
-        await isolate_vocals(args)
-    elif args.subcommand == "revoice":
-        await revoice(args)
-    elif args.subcommand == "merge_vocals":
-        await merge_vocals(args)
-    elif args.subcommand == "wwise_import":
-        await wwise_import(args)
-    elif args.subcommand == "pack_files":
-        await pack_files(args)
-    elif args.subcommand == "zip":
-        zip(args)
-    elif args.subcommand == "workflow":
-        from workflow import workflow
-        workflow(args)
-    else:
-        parser.print_help()
+    try:
+        args = parser.parse_args(sys.argv[1:])
+        if args.subcommand == "clear_cache":
+            clear_cache()
+        elif args.subcommand == "extract_files":
+            await extract_files(args)
+        elif args.subcommand == "export_wem":
+            await export_wem(args)
+        elif args.subcommand == "isolate_vocals":
+            await isolate_vocals(args)
+        elif args.subcommand == "revoice":
+            await revoice(args)
+        elif args.subcommand == "merge_vocals":
+            await merge_vocals(args)
+        elif args.subcommand == "wwise_import":
+            await wwise_import(args)
+        elif args.subcommand == "move_wwise_files":
+            await move_wwise_files(args)
+        elif args.subcommand == "pack_files":
+            await pack_files(args)
+        elif args.subcommand == "zip":
+            zip(args)
+        elif args.subcommand == "workflow":
+            from workflow import workflow
+            workflow(args)
+        else:
+            parser.print_help()
+    except SystemExit as e:
+        if e.code != 0:
+            raise e
+
+
+def main():
+    """Main function of the program."""
+    asyncio.run(_main())
+
 
 if __name__ == "__main__":
     main()

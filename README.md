@@ -32,7 +32,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 5. Merge the new voice and effects (FFmpeg)
 6. Convert the voice lines back to .wem (WWise)
 7. Pack the new lines as an .archive (WolvenKit)
-8. Zip the mod for distribution **TODO**
+8. Zip the mod for distribution
 
 ## TODO
 
@@ -118,6 +118,8 @@ The parameters have following meanings:
 - `pattern` - Regex pattern of voice lines to replace. Default is `v_(?!posessed).*_f_.*` which is all female V's lines but not Johnny-possessed ones.
   - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$` and is matched agains the full path in game's archive.
 
+Once this command completes successfully, you can find your mod in the root folder of the project as `<name>.zip` (depending on the name you chose).
+
 Use command `voiceswap help` for more paramaters and information.
 
 **Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
@@ -151,7 +153,7 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
 - **Phase 7:** `pack_files [archive_name]` - Packs the files into a `.archive`.
   - Should be pretty quick.
 - **Phase 8:** `zip [archive_name]` - Zips the resulting files for distribution.
-  - This final step should be nearly instant, too.
+  - This final step should be fast too.
 
 ## Development
 

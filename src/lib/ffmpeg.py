@@ -26,7 +26,7 @@ async def convert(source: str, output: str):
             f"Converting file {source} failed with exit code {result}")
 
 
-async def merge_vocals(vocals_path: str, others_path: str, output_path: str):
+async def merge_vocals(vocals_path: str, others_path: str, output_path: str, voice_vol: float = 1.5, effect_vol: float = 1):
     """Merges vocals with effects."""
     parallel = Parallel("Merging vocals")
 
@@ -40,7 +40,8 @@ async def merge_vocals(vocals_path: str, others_path: str, output_path: str):
             "-hwaccel", "auto",
             "-i", os.path.join(vocals_path, path, name),
             "-i", os.path.join(others_path, path, other_name),
-            "-filter_complex", "amix=inputs=2:duration=longest",
+            "-filter_complex",
+            f"[0]volume={voice_vol}[a];[1]volume={effect_vol}[b];[a][b]amix=inputs=2:duration=longest",
             output,
             "-y",
             stderr=asyncio.subprocess.DEVNULL,

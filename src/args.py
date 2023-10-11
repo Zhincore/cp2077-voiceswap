@@ -3,7 +3,7 @@ import config
 
 main = argparse.ArgumentParser(
     prog="voiceswap",
-    description="Tool for automating the creation of AI voice-over mods for Cyberpunk 2077."
+    description="Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.",
 )
 subcommands = main.add_subparsers(title="subcommands", dest="subcommand")
 
@@ -189,6 +189,18 @@ merge_vocals.add_argument(
     default=config.MERGED_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
+merge_vocals.add_argument(
+    "--voice-vol",
+    type=float,
+    help="Adjust the volume of the voice. 1 is original volume.",
+    default=1.5,
+)
+merge_vocals.add_argument(
+    "--effect-vol",
+    type=float,
+    help="Adjust the volume of the effects. 1 is original volume.",
+    default=1,
+)
 
 # wwise_import
 wwise_import = subcommands.add_parser(
@@ -213,6 +225,34 @@ wwise_import.add_argument(
     "output",
     type=str,
     help="Where to move the converted files.",
+    default=config.WWISE_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
+# Move Wwise files
+move_wwise_files = subcommands.add_parser(
+    "move_wwise_files",
+    help="In case Wwise conversion gets stuck or you do the conversion manually, " +
+    "this command finds the converted files and tries to find their correct location."
+)
+move_wwise_files.add_argument(
+    "project",
+    type=str,
+    help="The Wwise project to use.",
+    default=config.WWISE_PROJECT,
+    nargs=argparse.OPTIONAL,
+)
+move_wwise_files.add_argument(
+    "reference_path",
+    type=str,
+    help="Path to the reference folder to find paths against.",
+    default=config.WOLVENKIT_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+move_wwise_files.add_argument(
+    "output_path",
+    type=str,
+    help="Path to the reference folder to find paths against.",
     default=config.WWISE_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
@@ -268,7 +308,8 @@ zip.add_argument(
 workflow = subcommands.add_parser(
     "workflow",
     help="Executes the whole workflow sequentially.",
-    parents=[revoice]
+    parents=[revoice],
+    conflict_handler="resolve",
 )
 workflow.add_argument(
     "name",

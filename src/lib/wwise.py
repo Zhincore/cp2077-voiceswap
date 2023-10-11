@@ -106,7 +106,7 @@ async def wait_waapi_load(waapi: WaapiClient):
 
 
 def move_wwise_files(converted_objects: list[dict], output_path: str):
-    """Moves all Wwise files to the given output folder and renames them correctly."""
+    """Moves all convertedWwise files to the given output folder and renames them correctly."""
 
     for obj in tqdm([x for x in converted_objects if x["type"] == "Sound"], desc="Renaming files", unit="file"):
 
@@ -125,6 +125,42 @@ def move_wwise_files(converted_objects: list[dict], output_path: str):
                 os.unlink(output)
 
         os.rename(obj["sound:convertedWemFilePath"], output)
+
+
+def move_wwise_files_auto(project_path: str, reference_path: str, output_path: str):
+    """Tries to find the correct output path for all converted files without the index of converted files."""
+
+    # Create own index/mapping
+    index = {}
+
+    for root, _dirs, files in os.walk(reference_path):
+        path = root[len(reference_path) + 1:]
+        for file in files:
+            base_name = file.split('.')[0]
+            if base_name in index:
+                print(
+                    f"File {file} exists in {index[base_name]} and {path}, using the latter")
+            index[base_name] = path
+
+    print(f"Created mapping of {len(index)} files")
+
+    project_dir = os.path.dirname(project_path)
+    cache_dir = os.path.join(project_dir, ".cache\\Windows\\SFX")
+
+    for file in tqdm(os.listdir(cache_dir), desc="Moving files", unit="file"):
+        if not file.endswith(".wem"):
+            continue
+
+        name = file.replace("_3F75BDB9", "")
+        base_name = name.split('.')[0]
+        if base_name not in index:
+            tqdm.write(f"File {file} was not found in the index!")
+
+        new_path = os.path.join(output_path, index[base_name], name)
+        if os.path.exists(new_path):
+            os.unlink(new_path)
+
+        os.rename(os.path.join(cache_dir, file), new_path)
 
 
 async def _convert_files(input_path: str, project_path: str, output_path: str, waapi):
