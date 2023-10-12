@@ -99,17 +99,16 @@ async def create_waapi(server: asyncio.subprocess.Process):
 async def wait_waapi_load(waapi: WaapiClient):
     """Wait until the WAAPI server is loaded."""
 
-    print("Waiting for Wwise to load...")
+    tqdm.write("Waiting for Wwise to load...")
     # The 'loaded' event was unreliable
     while not waapi.call("ak.wwise.core.getInfo"):
         await asyncio.sleep(0.5)
 
 
 def move_wwise_files(converted_objects: list[dict], output_path: str):
-    """Moves all convertedWwise files to the given output folder and renames them correctly."""
+    """Moves all converted Wwise files to the given output folder and renames them correctly."""
 
     for obj in tqdm([x for x in converted_objects if x["type"] == "Sound"], desc="Renaming files", unit="file"):
-
         original_path = obj["sound:originalWavFilePath"]
         filename = os.path.basename(original_path)[:-len(".wav")]
 
@@ -127,36 +126,24 @@ def move_wwise_files(converted_objects: list[dict], output_path: str):
         os.rename(obj["sound:convertedWemFilePath"], output)
 
 
-def move_wwise_files_auto(project_path: str, reference_path: str, output_path: str):
+def move_wwise_files_auto(project_path: str, output_path: str):
     """Tries to find the correct output path for all converted files without the index of converted files."""
-
-    # Create own index/mapping
-    index = {}
-
-    for root, _dirs, files in os.walk(reference_path):
-        path = root[len(reference_path) + 1:]
-        for file in files:
-            base_name = file.split('.')[0]
-            if base_name in index:
-                print(
-                    f"File {file} exists in {index[base_name]} and {path}, using the latter")
-            index[base_name] = path
-
-    print(f"Created mapping of {len(index)} files")
 
     project_dir = os.path.dirname(project_path)
     cache_dir = os.path.join(project_dir, ".cache\\Windows\\SFX")
 
-    for file in tqdm(os.listdir(cache_dir), desc="Moving files", unit="file"):
-        if not file.endswith(".wem"):
-            continue
+    found_files = []
 
-        name = file.replace("_3F75BDB9", "")
-        base_name = name.split('.')[0]
-        if base_name not in index:
-            tqdm.write(f"File {file} was not found in the index!")
+    for root, _dirs, files in os.walk(cache_dir):
+        path = root[len(cache_dir) + 1:]
+        for file in files:
+            if not file.endswith(".wem"):
+                continue
 
-        new_path = os.path.join(output_path, index[base_name], name)
+            found_files.append(os.path.join(path, file))
+
+    for file in tqdm(found_files, desc="Moving files", unit="file"):
+        new_path = os.path.join(output_path, file.replace("_3F75BDB9", ""))
         if os.path.exists(new_path):
             os.unlink(new_path)
 
@@ -167,10 +154,13 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     # Wait for load
     await wait_waapi_load(waapi)
 
+    tqdm.write("Starting automation mode...")
+
     # Setup
     waapi.call("ak.wwise.debug.enableAutomationMode", {"enable": True})
 
     # List all files
+    tqdm.write("Starting import...")
     imports = []
 
     for root, _dirs, files in os.walk(input_path):
@@ -181,6 +171,7 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
             if file.endswith(".wav"):
                 imports.append({
                     "audioFile": os.path.join(os.getcwd(), root, file),
+                    "originalsSubFolder": root[len(input_path):],
                     "objectPath": os.path.join(WWISE_OBJECT_PATH, path, "<Sound>"+file),
                 })
 
@@ -207,9 +198,9 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     # Done
     pbar.close()
     handler.unsubscribe()
-    waapi.call("ak.wwise.core.project.save")
 
     # Create convert thread
+    tqdm.write("Starting conversion...")
     convert_thread = Thread(
         target=waapi.call,
         args=("ak.wwise.ui.commands.execute", {
@@ -254,22 +245,22 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     observer.stop()
     pbar.close()
     handler.unsubscribe()
-    waapi.call("ak.wwise.core.project.save")
 
     # Move and rename files
+    tqdm.write("Starting moving files...")
     move_wwise_files(converted_objects, output_path)
 
-    print("Conversion done!")
+    tqdm.write("Conversion done!")
 
 
 async def convert_files(input_path: str, project_path: str, output_path: str):
     """Converts all files in the given folder to Wwise format."""
     await create_project(project_path)
 
-    print("##############################################################")
-    print("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
-    print("#  The Wwise window will be fully automated, don't touch it! #")
-    print("##############################################################")
+    tqdm.write("##############################################################")
+    tqdm.write("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
+    tqdm.write("#  The Wwise window will be fully automated, don't touch it! #")
+    tqdm.write("##############################################################")
     await asyncio.sleep(5)
 
     #  Start the WAAPI server
@@ -277,16 +268,16 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     server = await anext(server_spawn)
 
     # Try to estabilish connection
-    print("Trying to connect to Wwise...")
+    tqdm.write("Trying to connect to Wwise...")
     waapi = await create_waapi(server)
-    print("Connected!")
+    tqdm.write("Connected!")
 
     # Run the script
     try:
         await _convert_files(input_path, project_path, output_path, waapi)
     finally:
         # Close the WAAPI server
-        print("Closing Wwise...")
+        tqdm.write("Closing Wwise...")
         waapi.disconnect()
         if server.returncode is None:
             server.terminate()

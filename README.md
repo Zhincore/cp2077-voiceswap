@@ -45,7 +45,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 
 ### 1. Install RVC
 
-[RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) is a tool for converting voices using AI.
+[RVC WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md) is a tool to change voice of an audio. It also allows to split audio to vocals and background noise, which is very useful for our purposes.
 
 The linked README isn't very clear so I'll try to write the basic steps.
 Choose whether you want to use [Poetry](https://python-poetry.org/docs/) or just pip, I'll try to describe both options.
@@ -72,7 +72,7 @@ Choose whether you want to use [Poetry](https://python-poetry.org/docs/) or just
 
 **Note:** Intel ARC and AMD ROCm have some extra instructions in the [RVC's README](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/docs/en/README.en.md).
 
-If everything went correctly, the RVC should boot up and show you a page in your browser. You can now close the page and press `Ctrl+C` in the console to quit the script.
+If everything went correctly, after the last step, RVC should boot up and show you a page in your browser. You can now close the page and press `Ctrl+C` in the console to quit the script.
 
 You will need the location where you installed RVC later.
 

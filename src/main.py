@@ -53,9 +53,9 @@ async def wwise_import(args: Namespace):
     await wwise.convert_files(args.input, args.project, args.output)
 
 
-async def move_wwise_files(args: Namespace):
+def move_wwise_files(args: Namespace):
     """Finds the converted files and tries to find their correct location."""
-    await wwise.move_wwise_files_auto(args.project, args.reference_path, args.output_path)
+    wwise.move_wwise_files_auto(args.project, args.output_path)
 
 
 async def pack_files(args: Namespace):
@@ -65,7 +65,7 @@ async def pack_files(args: Namespace):
 
 def zip(args: Namespace):
     """Zips given folder for distribution"""
-    print("Zipping folder...")
+    tqdm.write("Zipping folder...")
     shutil.make_archive(args.archive, "zip", args.folder)
 
 
@@ -90,14 +90,14 @@ async def _main():
         elif args.subcommand == "wwise_import":
             await wwise_import(args)
         elif args.subcommand == "move_wwise_files":
-            await move_wwise_files(args)
+            move_wwise_files(args)
         elif args.subcommand == "pack_files":
             await pack_files(args)
         elif args.subcommand == "zip":
             zip(args)
         elif args.subcommand == "workflow":
             from workflow import workflow
-            workflow(args)
+            await workflow(args)
         else:
             parser.print_help()
     except SystemExit as e:

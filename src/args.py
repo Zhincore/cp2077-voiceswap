@@ -243,13 +243,6 @@ move_wwise_files.add_argument(
     nargs=argparse.OPTIONAL,
 )
 move_wwise_files.add_argument(
-    "reference_path",
-    type=str,
-    help="Path to the reference folder to find paths against.",
-    default=config.WOLVENKIT_OUTPUT,
-    nargs=argparse.OPTIONAL,
-)
-move_wwise_files.add_argument(
     "output_path",
     type=str,
     help="Path to the reference folder to find paths against.",

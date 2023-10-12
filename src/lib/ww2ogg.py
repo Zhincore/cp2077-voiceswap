@@ -39,4 +39,4 @@ async def ww2ogg_all(input_path: str, output_path: str):
                 parallel.run(process, path, name)
 
     await parallel.wait()
-    print("Exporting done!")
+    tqdm.write("Exporting done!")

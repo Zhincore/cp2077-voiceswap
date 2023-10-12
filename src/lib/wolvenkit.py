@@ -14,7 +14,7 @@ async def extract_files(pattern: str, output_path: str):
         if folder != "mod":
             folders.append(("-p", f"{game_path}\\archive\\pc\\{folder}"))
 
-    print("Starting WolvenKit...")
+    tqdm.write("Starting WolvenKit...")
 
     process = await asyncio.create_subprocess_exec(
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
@@ -28,12 +28,12 @@ async def extract_files(pattern: str, output_path: str):
     if result != 0:
         raise SubprocessException(
             "Extracting failed with exit code " + str(result))
-    print("Extracting done!")
+    tqdm.write("Extracting done!")
 
 
 async def pack_files(archive: str, path: str, output: str):
     """Pack given folder into a .archive"""
-    print("Starting WolvenKit...")
+    tqdm.write("Starting WolvenKit...")
 
     process = await asyncio.create_subprocess_exec(
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
@@ -56,4 +56,5 @@ async def pack_files(archive: str, path: str, output: str):
     if os.path.exists(output_file):
         os.unlink(output_file)
     os.rename(result_path, output_file)
-    print("Packing done!")
+    tqdm.write(f"File moved to {output_file}")
+    tqdm.write("Packing done!")
