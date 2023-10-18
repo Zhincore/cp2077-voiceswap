@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from itertools import chain
 import asyncio
 from util import SubprocessException
@@ -46,7 +47,7 @@ async def pack_files(archive: str, path: str, output: str):
         raise SubprocessException(
             "Packing failed with exit code " + str(result))
 
-    basename = os.path.basename(path)
+    basename = os.path.basename(path).replace("\\", "")
     dirname = os.path.dirname(path)
     result_path = os.path.join(dirname, basename+".archive")
     output_path = os.path.join(output, "archive\\pc\\mod\\")

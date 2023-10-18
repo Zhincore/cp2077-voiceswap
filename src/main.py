@@ -3,6 +3,7 @@ import shutil
 import asyncio
 from argparse import Namespace
 from dotenv import load_dotenv
+from tqdm import tqdm
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
 import lib.rvc as rvc

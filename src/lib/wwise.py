@@ -144,8 +144,14 @@ def move_wwise_files_auto(project_path: str, output_path: str):
 
     for file in tqdm(found_files, desc="Moving files", unit="file"):
         new_path = os.path.join(output_path, file.replace("_3F75BDB9", ""))
-        if os.path.exists(new_path):
-            os.unlink(new_path)
+        new_dir = os.path.dirname(new_path)
+
+        try:
+            os.makedirs(new_dir)
+        except OSError:
+            # Overwrite existing files
+            if os.path.exists(new_path):
+                os.unlink(new_path)
 
         os.rename(os.path.join(cache_dir, file), new_path)
 

@@ -1,5 +1,6 @@
 import os
 import asyncio
+from tqdm import tqdm
 from util import Parallel, SubprocessException
 
 
