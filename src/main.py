@@ -1,4 +1,5 @@
 import sys
+import os
 import shutil
 import asyncio
 from argparse import Namespace
@@ -7,6 +8,7 @@ from tqdm import tqdm
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
 import lib.bnk_reader as bnk_reader
+import lib.opustoolz as opustoolz
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
 import lib.wwise as wwise
@@ -19,6 +21,19 @@ load_dotenv(".env")
 def clear_cache():
     """Deletes the .cache folder."""
     shutil.rmtree(config.CACHE_PATH)
+
+
+async def export_sfx(args: Namespace):
+    """Exports all the SFX from the game."""
+    tqdm.write("Extracting SFX containers from the game...")
+    # await wolvenkit.extract_files("sfx_container", config.SFX_CACHE_PATH)
+
+    tqdm.write("Exporting SFX auido files from the containers...")
+    await opustoolz.export_all_sfx(
+        os.path.join(config.SFX_CACHE_PATH,
+                     "base\\sound\\soundbanks\\sfx_container.opusinfo"),
+        os.path.join(config.SFX_CACHE_PATH, "exported")
+    )
 
 
 async def sfx_metadata():
@@ -95,6 +110,8 @@ async def _main():
         args = parser.parse_args(sys.argv[1:])
         if args.subcommand == "clear_cache":
             clear_cache()
+        elif args.subcommand == "export_sfx":
+            await export_sfx(args)
         elif args.subcommand == "sfx_metadata":
             await sfx_metadata()
         elif args.subcommand == "extract_files":

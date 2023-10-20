@@ -16,6 +16,19 @@ clear = subcommands.add_parser(
     help="Deletes the .cache folder."
 )
 
+# Export all SFX files
+export_sfx = subcommands.add_parser(
+    "export_sfx",
+    help="Export all SFX audio files."
+)
+export_sfx.add_argument(
+    "output",
+    type=str,
+    help="Where to put all the SFX audio files.",
+    default=config.SFX_CACHE_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
 # Extract SFX metadata
 sfx_metadata = subcommands.add_parser(
     "sfx_metadata",

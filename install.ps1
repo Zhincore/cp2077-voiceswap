@@ -1,12 +1,20 @@
 Set-Location libs
 
 # Download CpBnkReader
-Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.0/CpBnkReader.zip -o CpBnkReader.zip
+Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.1/CpBnkReader.zip -o CpBnkReader.zip
 mkdir CpBnkReader
 Set-Location CpBnkReader
 tar -xf ..\CpBnkReader.zip
 Set-Location ..
 Remove-Item CpBnkReader.zip
+
+# Download OpusToolZ
+Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v1.0/OpusToolZ.zip -o OpusToolZ.zip
+mkdir OpusToolZ
+Set-Location OpusToolZ
+tar -xf ..\OpusToolZ.zip
+Set-Location ..
+Remove-Item OpusToolZ.zip
 
 # Download WolvenKit
 Invoke-WebRequest https://github.com/WolvenKit/WolvenKit/releases/download/8.11.0/WolvenKit.Console-1.11.0.zip -o WolvenKit.zip

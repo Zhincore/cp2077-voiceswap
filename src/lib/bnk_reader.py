@@ -1,6 +1,7 @@
 import os
 import asyncio
 from tqdm import tqdm
+from util import SubprocessException
 
 
 async def convert_bnk(bnk_path: str, output_path: str):

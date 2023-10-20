@@ -24,15 +24,20 @@ Using WolvenKit for modding and RVC for voice conversion.
 
 ## Goals
 
+This project aims to achieve the following:
+
 0. Download and install dependencies
 1. Unpack wanted voice lines from the game (WolvenKit)
 2. Convert them from .wem to a usable format (ww2ogg)
-3. Separate voice and effects (RVC)
-4. Convert to wanted voice (RVC)
-5. Merge the new voice and effects (FFmpeg)
-6. Convert the voice lines back to .wem (WWise)
-7. Pack the new lines as an .archive (WolvenKit)
-8. Zip the mod for distribution
+3. Extract all SFX audio files from the game (WolvenKit + OpusToolZ) _Optional_ **WIP**
+4. Select all needed SFX files (CpBnkReader) _Optional_ **WIP**
+5. Separate voice and effects (RVC)
+6. Convert to wanted voice (RVC) **WIP: SFX too**
+7. Merge the new voice and effects (FFmpeg)
+8. Convert the voice lines back to .wem (WWise)
+9. Pack the new lines as an .archive (WolvenKit)
+10. Create a REDmod with a list of SFX files _Optional_ **TODO**
+11. Zip the mod for distribution
 
 ## TODO
 
