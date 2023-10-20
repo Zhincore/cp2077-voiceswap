@@ -45,7 +45,7 @@ Using WolvenKit for modding and RVC for voice conversion.
 
 Download a ready-made 7zip for your system from the [RVC Releases page](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/releases) (Recommended) or follow the instructions in my [Installing RVC from source guide](/RVC-installation.md).
 
-Unpack the downloaded zip and test that it works by running the `go-web.bat` script.
+Unpack the downloaded zip and test that it works by running the `go-web.bat` script, you can then close the console window to end RVC.
 
 You will need the location where you installed RVC later.
 
@@ -72,7 +72,9 @@ But don't worry, this script will do everything for you.
 
 1.  Clone this repository (e.g. `git clone https://github.com/zhincore/cp2077-voiceswap` or download it as a zip and unpack).
 2.  Go to the projects's folder (e.g. `cd cp2077-voiceswap`).
-3.  Run `install.ps1` to install the project and dependencies.
+3.  Run `.\install.ps1` to install the project and dependencies.  
+    **NOTE:** If you get the _"scripting is disabled on this system"_ error, run this command instead:  
+    `powershell.exe -noprofile -executionpolicy bypass -file .\install.ps1`
 4.  Copy or rename file `.env.example` to `.env` and configure it for your setup.
     The example file contains comments which will hopefully help you.
 

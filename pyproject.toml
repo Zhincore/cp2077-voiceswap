@@ -14,6 +14,7 @@ requires-python = ">=3.9"
 dependencies  = [
   "asyncio",
   "python-dotenv",
+  "typing_extensions",
   "tqdm",
   "waapi-client",
   "nest-asyncio",

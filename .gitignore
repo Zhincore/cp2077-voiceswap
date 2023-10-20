@@ -9,3 +9,4 @@ libs/*
 __pycache__
 *.zip
 .pytest_cache
+.metadata

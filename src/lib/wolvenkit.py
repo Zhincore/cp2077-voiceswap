@@ -4,6 +4,7 @@ from tqdm import tqdm
 from itertools import chain
 import asyncio
 from util import SubprocessException
+from config import WOLVENKIT_EXE
 
 
 async def extract_files(pattern: str, output_path: str):
@@ -16,10 +17,10 @@ async def extract_files(pattern: str, output_path: str):
         if folder != "mod":
             folders.append(("-p", f"{game_path}\\archive\\pc\\{folder}"))
 
-    tqdm.write("Starting WolvenKit...")
+    tqdm.write("Starting WolvenKit unbundle...")
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
+        WOLVENKIT_EXE,
         "unbundle",
         *(chain(*folders)),
         "-o", output_path,
@@ -33,14 +34,36 @@ async def extract_files(pattern: str, output_path: str):
     tqdm.write("Extracting done!")
 
 
+async def uncook_json(pattern: str, output_path: str):
+    """Extract json files from the game matching the given pattern."""
+    game_path = os.getenv("CYBERPUNK_PATH")
+
+    tqdm.write("Starting WolvenKit uncook...")
+
+    process = await asyncio.create_subprocess_exec(
+        WOLVENKIT_EXE,
+        "uncook",
+        f"{game_path}\\archive\\pc\\content",
+        "-s", "-u",
+        "-r", pattern,
+        "-o", output_path
+    )
+    result = await process.wait()
+
+    if result != 0:
+        raise SubprocessException(
+            "Uncooking failed with exit code " + str(result))
+    tqdm.write("Uncooking done!")
+
+
 async def pack_files(archive: str, input_path: str, output: str):
     """Pack given folder into a .archive"""
-    tqdm.write("Starting WolvenKit...")
+    tqdm.write("Starting WolvenKit pack...")
 
     input_path = re.sub(r"\\$", "", input_path)
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
+        WOLVENKIT_EXE,
         "pack",
         "-p", input_path
     )

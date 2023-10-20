@@ -16,6 +16,12 @@ clear = subcommands.add_parser(
     help="Deletes the .cache folder."
 )
 
+# Extract SFX metadata
+sfx_metadata = subcommands.add_parser(
+    "sfx_metadata",
+    help="Extracts SFX metadata from the game."
+)
+
 # Extract files
 extract_files = subcommands.add_parser(
     "extract_files",

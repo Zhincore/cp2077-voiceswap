@@ -1,3 +1,6 @@
+WOLVENKIT_EXE = ".\\libs\\WolvenKit\\WolvenKit.CLI.exe"
+
+METADATA_PATH = ".metadata"
 CACHE_PATH = ".cache"
 
 WOLVENKIT_OUTPUT = CACHE_PATH + "\\archive"

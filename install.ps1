@@ -1,7 +1,15 @@
 Set-Location libs
 
+# Download CpBnkReader
+Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.0/CpBnkReader.zip -o CpBnkReader.zip
+mkdir CpBnkReader
+Set-Location CpBnkReader
+tar -xf ..\CpBnkReader.zip
+Set-Location ..
+Remove-Item CpBnkReader.zip
+
 # Download WolvenKit
-Invoke-WebRequest https://github.com/WolvenKit/WolvenKit-nightly-releases/releases/download/8.11.0-nightly.2023-10-03/WolvenKit.Console-1.11.0-nightly.2023-10-03.zip -o WolvenKit.zip
+Invoke-WebRequest https://github.com/WolvenKit/WolvenKit/releases/download/8.11.0/WolvenKit.Console-1.11.0.zip -o WolvenKit.zip
 mkdir WolvenKit
 Set-Location WolvenKit
 tar -xf ..\WolvenKit.zip

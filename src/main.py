@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
+import lib.bnk_reader as bnk_reader
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
 import lib.wwise as wwise
@@ -18,6 +19,22 @@ load_dotenv(".env")
 def clear_cache():
     """Deletes the .cache folder."""
     shutil.rmtree(config.CACHE_PATH)
+
+
+async def sfx_metadata():
+    """Extracts SFX metadata from the game."""
+
+    pbar = tqdm(total=3, desc="Extracting SFX metadata")
+
+    await wolvenkit.uncook_json("eventsmetadata.json", config.METADATA_PATH)
+    pbar.update(1)
+
+    await wolvenkit.extract_files("sfx_container.bnk", config.METADATA_PATH)
+    pbar.update(1)
+
+    await bnk_reader.convert_bnk(os.path.join(config.METADATA_PATH, "base\\sound\\soundbanks\\sfx_container.bnk"),
+                                 os.path.join(config.METADATA_PATH, "base\\sound\\soundbanks\\sfx_container.json"))
+    pbar.update(1)
 
 
 async def extract_files(args: Namespace):
@@ -78,6 +95,8 @@ async def _main():
         args = parser.parse_args(sys.argv[1:])
         if args.subcommand == "clear_cache":
             clear_cache()
+        elif args.subcommand == "sfx_metadata":
+            await sfx_metadata()
         elif args.subcommand == "extract_files":
             await extract_files(args)
         elif args.subcommand == "export_wem":
