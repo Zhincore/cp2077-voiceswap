@@ -1,4 +1,5 @@
 import os
+import re
 from tqdm import tqdm
 from itertools import chain
 import asyncio
@@ -32,14 +33,16 @@ async def extract_files(pattern: str, output_path: str):
     tqdm.write("Extracting done!")
 
 
-async def pack_files(archive: str, path: str, output: str):
+async def pack_files(archive: str, input_path: str, output: str):
     """Pack given folder into a .archive"""
     tqdm.write("Starting WolvenKit...")
+
+    input_path = re.sub(r"\\$", "", input_path)
 
     process = await asyncio.create_subprocess_exec(
         ".\\libs\\WolvenKit\\WolvenKit.CLI.exe",
         "pack",
-        "-p", path
+        "-p", input_path
     )
     result = await process.wait()
 
@@ -47,15 +50,17 @@ async def pack_files(archive: str, path: str, output: str):
         raise SubprocessException(
             "Packing failed with exit code " + str(result))
 
-    basename = os.path.basename(path).replace("\\", "")
-    dirname = os.path.dirname(path)
+    basename = os.path.basename(input_path)
+    dirname = os.path.dirname(input_path)
     result_path = os.path.join(dirname, basename+".archive")
-    output_path = os.path.join(output, "archive\\pc\\mod\\")
-    os.makedirs(output_path, exist_ok=True)
+    output_dir = os.path.join(output, "archive\\pc\\mod")
+    output_path = os.path.join(output_dir, archive+".archive")
 
-    output_file = os.path.join(output_path, archive+".archive")
-    if os.path.exists(output_file):
-        os.unlink(output_file)
-    os.rename(result_path, output_file)
-    tqdm.write(f"File moved to {output_file}")
+    if os.path.exists(output_path):
+        os.unlink(output_path)
+    else:
+        os.makedirs(output_dir, exist_ok=True)
+
+    os.rename(result_path, output_path)
+    tqdm.write(f"File moved to {output_path}")
     tqdm.write("Packing done!")

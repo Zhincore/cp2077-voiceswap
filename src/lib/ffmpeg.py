@@ -31,8 +31,8 @@ async def merge_vocals(vocals_path: str, others_path: str, output_path: str, voi
     parallel = Parallel("Merging vocals")
 
     async def process(name: str, path: str):
-        other_name = re.sub(r"_main_vocal\.wav$", "_others.wav", name)
-        base_name = re.sub(r"\.\w+(\.reformatted.wav)?_main_vocal", "", name)
+        other_name = re.sub(r"_main_vocal(\.wav)+$", "_others.wav", name)
+        base_name = re.sub(r"\.\w+(\.reformatted.wav)?_main_vocal(\.wav)+", ".wav", name)
         output = os.path.join(output_path, path, base_name)
 
         process = await asyncio.create_subprocess_exec(
