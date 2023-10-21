@@ -4,7 +4,6 @@ import asyncio
 from itertools import chain
 from tqdm import tqdm
 from util import SubprocessException
-from config import SFX_TAGS
 
 
 def has_all(what: list, where: list):
@@ -15,19 +14,21 @@ def has_all(what: list, where: list):
     return True
 
 
-def link_sfx(map_path: str, sfx_path: str, output_dir: str):
+def link_sfx(map_path: str, sfx_path: str, output_dir: str, gender: str):
     """Create hard links in output_dir to SFX in sfx_path that have the configured tags in map_path."""
+
+    tqdm.write("Loading map...")
     index = {}
     with open(map_path, "r") as f:
         index = json.loads(f.read())
 
     os.makedirs(output_dir, exist_ok=True)
 
-    for event_name, item in tqdm(index.items(), desc="Finding wanted events", unit="event"):
-        if not has_all(SFX_TAGS, item["tags"]):
+    for event_name, event in tqdm(index.items(), desc="Finding wanted events", unit="event"):
+        if not has_all(["generic_"+gender, "set_01"], item["tags"]):
             continue
 
-        for sound in tqdm(item["sounds"], desc="Linking files", unit="file"):
+        for sound in event["sounds"]:
             if not sound["found"]:
                 continue
 

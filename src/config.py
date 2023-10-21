@@ -5,22 +5,25 @@ SFX_CACHE_PATH = ".sfx_cache"
 CACHE_PATH = ".cache"
 
 SFX_EXPORT_PATH = SFX_CACHE_PATH + "\\exported"
-SFX_TAGS = ["generic_f", "set_01"]
 
 WOLVENKIT_OUTPUT = CACHE_PATH + "\\archive"
 
-EXPORTED_OUTPUT = CACHE_PATH + "\\raw"
+WW2OGG_OUTPUT = CACHE_PATH + "\\raw"
+SFX_RAW_OUTPUT = CACHE_PATH + "\\raw_sfx"
 
 UVR_MODEL = "onnx_dereverb_By_FoxJoy"
 UVR_OUTPUT_VOCALS = CACHE_PATH + "\\split\\vocals"
 UVR_OUTPUT_REST = CACHE_PATH + "\\split\\rest"
 
 RVC_OUTPUT = CACHE_PATH + "\\voiced"
+SFX_RVC_OUTPUT = CACHE_PATH + "\\voiced_sfx"
 
 MERGED_OUTPUT = CACHE_PATH + "\\merged"
+SFX_CONVERT_OUTPUT = CACHE_PATH + "\\converted_sfx"
 
 WWISE_PROJECT = CACHE_PATH + "\\wwise_project\\wwise_project.wproj"
 WWISE_OUTPUT = CACHE_PATH + "\\complete"
+SFX_PAKS_OUTPUT = WWISE_OUTPUT
 
 ARCHIVE_NAME = "voiceswap"
 

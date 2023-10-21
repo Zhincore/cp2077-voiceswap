@@ -10,6 +10,7 @@ import lib.ffmpeg as ffmpeg
 import lib.bnk_reader as bnk_reader
 import lib.sfx_mapping as sfx_mapping
 import lib.opustoolz as opustoolz
+import lib.opuspak as opuspak
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
 import lib.wwise as wwise
@@ -60,7 +61,8 @@ async def map_sfx(args: Namespace):
 
 async def select_sfx(args: Namespace):
     """Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."""
-    sfx_mapping.link_sfx(args.map_path, args.sfx_path, args.output_dir)
+    sfx_mapping.link_sfx(args.map_path, args.sfx_path,
+                         args.output_dir, args.gender)
 
 
 async def extract_files(args: Namespace):
@@ -92,6 +94,11 @@ async def merge_vocals(args: Namespace):
     await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path, args.voice_vol, args.effect_vol)
 
 
+async def sfx_to_opus(args: Namespace):
+    """Convert files to opuspak opus."""
+    await ffmpeg.convert_opus(args.input_path, args.output_path)
+
+
 async def wwise_import(args: Namespace):
     """Import all found audio files to Wwise and runs conversion."""
     await wwise.convert_files(args.input, args.project, args.output)
@@ -100,6 +107,12 @@ async def wwise_import(args: Namespace):
 async def move_wwise_files(args: Namespace):
     """Finds the converted files and tries to find their correct location."""
     wwise.move_wwise_files_auto(args.project, args.output_path)
+
+
+async def patch_opuspaks(args: Namespace):
+    """Patch opuspaks with new opuses."""
+    opuspak.patch_opuspaks(
+        args.map_path, args.input_path, args.paks_path, args.output_path)
 
 
 async def pack_files(args: Namespace):
@@ -139,8 +152,10 @@ async def _main():
             "isolate_vocals": isolate_vocals,
             "revoice": revoice,
             "merge_vocals": merge_vocals,
+            "sfx_to_opus": sfx_to_opus,
             "wwise_import": wwise_import,
             "move_wwise_files": move_wwise_files,
+            "patch_opuspaks": patch_opuspaks,
             "pack_files": pack_files,
             "zip": zip_files,
             "workflow": run_workflow,

@@ -82,6 +82,11 @@ select_sfx = subcommands.add_parser(
     help="Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."
 )
 select_sfx.add_argument(
+    "gender",
+    type=str,
+    help="Which gender of grunts to export (f or m).",
+)
+select_sfx.add_argument(
     "sfx_path",
     type=str,
     help="Path where exported SFX files is stored.",
@@ -99,7 +104,7 @@ select_sfx.add_argument(
     "output_dir",
     type=str,
     help="Path to json file that will be created with the map.",
-    default=config.EXPORTED_OUTPUT+"\\sfx",
+    default=config.SFX_RAW_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 
@@ -139,7 +144,7 @@ export_wem.add_argument(
     "output",
     type=str,
     help="Path where to output the converted files.",
-    default=config.EXPORTED_OUTPUT,
+    default=config.WW2OGG_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 
@@ -150,7 +155,7 @@ isolate_vocals.add_argument(
     "input",
     type=str,
     help="Path to folder of files to split.",
-    default=config.EXPORTED_OUTPUT,
+    default=config.WW2OGG_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
@@ -289,6 +294,24 @@ merge_vocals.add_argument(
     default=1,
 )
 
+# Convert sfx to opus
+sfx_to_opus = subcommands.add_parser(
+    "sfx_to_opus", help="Convert SFX back to opus.")
+sfx_to_opus.add_argument(
+    "input_path",
+    type=str,
+    help="Path to folder of new SFX.",
+    default=config.SFX_RVC_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+sfx_to_opus.add_argument(
+    "output_path",
+    type=str,
+    help="Path where to output the converted files.",
+    default=config.SFX_CONVERT_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
 # wwise_import
 wwise_import = subcommands.add_parser(
     "wwise_import",
@@ -334,6 +357,38 @@ move_wwise_files.add_argument(
     type=str,
     help="Path to the reference folder to find paths against.",
     default=config.WWISE_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+
+# Convert sfx to opus
+patch_opuspaks = subcommands.add_parser(
+    "patch_opuspaks", help="Patch opuspaks with new opuses.")
+patch_opuspaks.add_argument(
+    "map_path",
+    type=str,
+    help="Path to sfx_map.json file.",
+    default=config.METADATA_PATH+"\\sfx_map.json",
+    nargs=argparse.OPTIONAL,
+)
+patch_opuspaks.add_argument(
+    "input_path",
+    type=str,
+    help="Path with the new opus files.",
+    default=config.SFX_CONVERT_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+patch_opuspaks.add_argument(
+    "paks_path",
+    type=str,
+    help="Path with original opuspak files.",
+    default=config.SFX_CACHE_PATH+"\\base\\sound\\soundbanks",
+    nargs=argparse.OPTIONAL,
+)
+patch_opuspaks.add_argument(
+    "output_path",
+    type=str,
+    help="Path where to output the patched paks.",
+    default=config.SFX_PAKS_OUTPUT+"\\base\\sound\\soundbanks",
     nargs=argparse.OPTIONAL,
 )
 
