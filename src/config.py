@@ -5,10 +5,11 @@ SFX_CACHE_PATH = ".sfx_cache"
 CACHE_PATH = ".cache"
 
 SFX_EXPORT_PATH = SFX_CACHE_PATH + "\\exported"
+SFX_TAGS = ["generic_f", "set_01"]
 
 WOLVENKIT_OUTPUT = CACHE_PATH + "\\archive"
 
-WW2OGG_OUTPUT = CACHE_PATH + "\\raw"
+EXPORTED_OUTPUT = CACHE_PATH + "\\raw"
 
 UVR_MODEL = "onnx_dereverb_By_FoxJoy"
 UVR_OUTPUT_VOCALS = CACHE_PATH + "\\split\\vocals"

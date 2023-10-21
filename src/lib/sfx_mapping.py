@@ -4,6 +4,39 @@ import asyncio
 from itertools import chain
 from tqdm import tqdm
 from util import SubprocessException
+from config import SFX_TAGS
+
+
+def has_all(what: list, where: list):
+    """Utility function that returns wether `where` has all items in `what`."""
+    for item in what:
+        if item not in where:
+            return False
+    return True
+
+
+def link_sfx(map_path: str, sfx_path: str, output_dir: str):
+    """Create hard links in output_dir to SFX in sfx_path that have the configured tags in map_path."""
+    index = {}
+    with open(map_path, "r") as f:
+        index = json.loads(f.read())
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    for event_name, item in tqdm(index.items(), desc="Finding wanted events", unit="event"):
+        if not has_all(SFX_TAGS, item["tags"]):
+            continue
+
+        for sound in tqdm(item["sounds"], desc="Linking files", unit="file"):
+            if not sound["found"]:
+                continue
+
+            filename = str(sound["hash"]) + ".opus"
+
+            os.link(
+                os.path.join(sfx_path, filename),
+                os.path.join(output_dir, filename)
+            )
 
 
 def build_sfx_event_index(metadata_path: str, sfx_path: str, output_path: str):

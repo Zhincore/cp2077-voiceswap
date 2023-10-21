@@ -76,6 +76,33 @@ map_sfx.add_argument(
     nargs=argparse.OPTIONAL,
 )
 
+# Select SFX files
+select_sfx = subcommands.add_parser(
+    "select_sfx",
+    help="Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."
+)
+select_sfx.add_argument(
+    "sfx_path",
+    type=str,
+    help="Path where exported SFX files is stored.",
+    default=config.SFX_EXPORT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+select_sfx.add_argument(
+    "map_path",
+    type=str,
+    help="Path to sfx_map.json file.",
+    default=config.METADATA_PATH+"\\sfx_map.json",
+    nargs=argparse.OPTIONAL,
+)
+select_sfx.add_argument(
+    "output_dir",
+    type=str,
+    help="Path to json file that will be created with the map.",
+    default=config.EXPORTED_OUTPUT+"\\sfx",
+    nargs=argparse.OPTIONAL,
+)
+
 # Extract files
 extract_files = subcommands.add_parser(
     "extract_files",
@@ -112,7 +139,7 @@ export_wem.add_argument(
     "output",
     type=str,
     help="Path where to output the converted files.",
-    default=config.WW2OGG_OUTPUT,
+    default=config.EXPORTED_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 
@@ -123,7 +150,7 @@ isolate_vocals.add_argument(
     "input",
     type=str,
     help="Path to folder of files to split.",
-    default=config.WW2OGG_OUTPUT,
+    default=config.EXPORTED_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
