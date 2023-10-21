@@ -8,6 +8,7 @@ from tqdm import tqdm
 import lib.wolvenkit as wolvenkit
 import lib.ffmpeg as ffmpeg
 import lib.bnk_reader as bnk_reader
+import lib.sfx_mapping as sfx_mapping
 import lib.opustoolz as opustoolz
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
@@ -26,30 +27,35 @@ def clear_cache():
 async def export_sfx(args: Namespace):
     """Exports all the SFX from the game."""
     tqdm.write("Extracting SFX containers from the game...")
-    # await wolvenkit.extract_files("sfx_container", config.SFX_CACHE_PATH)
+    await wolvenkit.extract_files("sfx_container", args.output)
 
-    tqdm.write("Exporting SFX auido files from the containers...")
-    await opustoolz.export_all_sfx(
-        os.path.join(config.SFX_CACHE_PATH,
-                     "base\\sound\\soundbanks\\sfx_container.opusinfo"),
-        os.path.join(config.SFX_CACHE_PATH, "exported")
-    )
+    tqdm.write("Exporting SFX audio files from the containers...")
+    await opustoolz.export_all_sfx(args.opusinfo, args.output)
 
 
-async def sfx_metadata():
+async def sfx_metadata(args: Namespace):
     """Extracts SFX metadata from the game."""
 
     pbar = tqdm(total=3, desc="Extracting SFX metadata")
 
-    await wolvenkit.uncook_json("eventsmetadata.json", config.METADATA_PATH)
+    await wolvenkit.uncook_json("eventsmetadata.json", args.output)
     pbar.update(1)
 
-    await wolvenkit.extract_files("sfx_container.bnk", config.METADATA_PATH)
+    await wolvenkit.extract_files("sfx_container.bnk", args.output)
     pbar.update(1)
 
-    await bnk_reader.convert_bnk(os.path.join(config.METADATA_PATH, "base\\sound\\soundbanks\\sfx_container.bnk"),
-                                 os.path.join(config.METADATA_PATH, "base\\sound\\soundbanks\\sfx_container.json"))
+    await bnk_reader.convert_bnk(os.path.join(args.output, "base\\sound\\soundbanks\\sfx_container.bnk"),
+                                 os.path.join(args.output, "base\\sound\\soundbanks\\sfx_container.json"))
     pbar.update(1)
+
+
+def map_sfx(args: Namespace):
+    "Create a map of SFX events. Needs sfx_metadata and export_sfx."
+    sfx_mapping.build_sfx_event_index(
+        args.metadata_path,
+        args.sfx_path,
+        args.output,
+    )
 
 
 async def extract_files(args: Namespace):
@@ -113,7 +119,9 @@ async def _main():
         elif args.subcommand == "export_sfx":
             await export_sfx(args)
         elif args.subcommand == "sfx_metadata":
-            await sfx_metadata()
+            await sfx_metadata(args)
+        elif args.subcommand == "map_sfx":
+            map_sfx(args)
         elif args.subcommand == "extract_files":
             await extract_files(args)
         elif args.subcommand == "export_wem":

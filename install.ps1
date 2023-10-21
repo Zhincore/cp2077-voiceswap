@@ -9,7 +9,7 @@ Set-Location ..
 Remove-Item CpBnkReader.zip
 
 # Download OpusToolZ
-Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v1.0/OpusToolZ.zip -o OpusToolZ.zip
+Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v1.1/OpusToolZ.zip -o OpusToolZ.zip
 mkdir OpusToolZ
 Set-Location OpusToolZ
 tar -xf ..\OpusToolZ.zip

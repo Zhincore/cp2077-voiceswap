@@ -25,7 +25,14 @@ export_sfx.add_argument(
     "output",
     type=str,
     help="Where to put all the SFX audio files.",
-    default=config.SFX_CACHE_PATH,
+    default=config.SFX_EXPORT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+export_sfx.add_argument(
+    "opusinfo",
+    type=str,
+    help="Path to .opusinfo file.",
+    default=config.SFX_EXPORT_PATH+"\\base\\sound\\soundbanks\\sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
@@ -33,6 +40,40 @@ export_sfx.add_argument(
 sfx_metadata = subcommands.add_parser(
     "sfx_metadata",
     help="Extracts SFX metadata from the game."
+)
+sfx_metadata.add_argument(
+    "output",
+    type=str,
+    help="Where to put the metadata.",
+    default=config.METADATA_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
+# Map SFX events
+map_sfx = subcommands.add_parser(
+    "map_sfx",
+    help="Create a map of SFX events. Needs sfx_metadata and export_sfx."
+)
+map_sfx.add_argument(
+    "metadata_path",
+    type=str,
+    help="Path where SFX metadata is stored.",
+    default=config.METADATA_PATH,
+    nargs=argparse.OPTIONAL,
+)
+map_sfx.add_argument(
+    "sfx_path",
+    type=str,
+    help="Where the SFX is exported.",
+    default=config.SFX_EXPORT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+map_sfx.add_argument(
+    "output",
+    type=str,
+    help="Path to json file that will be created with the map.",
+    default=config.METADATA_PATH+"\\sfx_map.json",
+    nargs=argparse.OPTIONAL,
 )
 
 # Extract files

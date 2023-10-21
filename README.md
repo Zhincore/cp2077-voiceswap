@@ -29,15 +29,16 @@ This project aims to achieve the following:
 0. Download and install dependencies
 1. Unpack wanted voice lines from the game (WolvenKit)
 2. Convert them from .wem to a usable format (ww2ogg)
-3. Extract all SFX audio files from the game (WolvenKit + OpusToolZ) _Optional_ **WIP**
-4. Select all needed SFX files (CpBnkReader) _Optional_ **WIP**
-5. Separate voice and effects (RVC)
-6. Convert to wanted voice (RVC) **WIP: SFX too**
-7. Merge the new voice and effects (FFmpeg)
-8. Convert the voice lines back to .wem (WWise)
-9. Pack the new lines as an .archive (WolvenKit)
-10. Create a REDmod with a list of SFX files _Optional_ **TODO**
-11. Zip the mod for distribution
+3. Extract all SFX audio files from the game (WolvenKit + OpusToolZ) _Optional_
+4. Create a mapping of SFX files _Optional_ **WIP**
+5. Select needed SFX files (CpBnkReader) _Optional_ **WIP**
+6. Separate voice and effects (RVC)
+7. Convert to wanted voice (RVC) **WIP: SFX too**
+8. Merge the new voice and effects (FFmpeg)
+9. Convert the voice lines back to .wem (WWise)
+10. Pack the new lines as an .archive (WolvenKit)
+11. Create a REDmod with a list of SFX files _Optional_ **TODO**
+12. Zip the mod for distribution
 
 ## TODO
 

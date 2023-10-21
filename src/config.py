@@ -4,6 +4,8 @@ METADATA_PATH = ".metadata"
 SFX_CACHE_PATH = ".sfx_cache"
 CACHE_PATH = ".cache"
 
+SFX_EXPORT_PATH = SFX_CACHE_PATH + "\\exported"
+
 WOLVENKIT_OUTPUT = CACHE_PATH + "\\archive"
 
 WW2OGG_OUTPUT = CACHE_PATH + "\\raw"
