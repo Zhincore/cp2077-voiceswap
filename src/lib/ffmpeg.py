@@ -66,37 +66,3 @@ async def merge_vocals(vocals_path: str, others_path: str, output_path: str, voi
 
     await parallel.wait()
     print("Merging done!")
-
-
-async def convert_opus(input_path: str, output_path: str):
-    """Convert files to opuspak opus."""
-    parallel = Parallel("Converting to opus")
-
-    async def process(name: str, path: str):
-        output_name = re.sub(r"\..+$", ".opus", name)
-
-        process = await asyncio.create_subprocess_exec(
-            get_ffmpeg(), *FFMPEG_ARGS,
-            "-i", os.path.join(input_path, path, name),
-            "-c:a", "libopus",
-            "-sample_fmt", "fltp",
-            "-serial_offset", "42",
-            "-b:a", "40k",  # TODO: Match the original?
-            os.path.join(output_path, path, output_name),
-            "-y",
-        )
-        result = await process.wait()
-
-        if result != 0:
-            raise SubprocessException(
-                f"Converting file {base_name} to opus failed with exit code {result}")
-
-    for root, _dirs, files in os.walk(input_path):
-        path = root[len(input_path) + 1:]
-        os.makedirs(os.path.join(output_path, path), exist_ok=True)
-
-        for name in files:
-            parallel.run(process, name, path)
-
-    await parallel.wait()
-    print("Merging done!")

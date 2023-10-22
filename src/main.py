@@ -10,10 +10,10 @@ import lib.ffmpeg as ffmpeg
 import lib.bnk_reader as bnk_reader
 import lib.sfx_mapping as sfx_mapping
 import lib.opustoolz as opustoolz
-import lib.opuspak as opuspak
 import lib.rvc as rvc
 import lib.ww2ogg as ww2ogg
 import lib.wwise as wwise
+import util
 import config
 from args import main as parser
 
@@ -39,20 +39,29 @@ async def sfx_metadata(args: Namespace):
 
     pbar = tqdm(total=3, desc="Extracting SFX metadata")
 
-    await wolvenkit.uncook_json("eventsmetadata.json", args.output)
+    await wolvenkit.uncook_json("eventsmetadata\.json", args.output)
     pbar.update(1)
 
-    await wolvenkit.extract_files("sfx_container.bnk", args.output)
+    await wolvenkit.extract_files(".*\.bnk", args.output)
     pbar.update(1)
 
-    await bnk_reader.convert_bnk(os.path.join(args.output, "base\\sound\\soundbanks\\sfx_container.bnk"),
-                                 os.path.join(args.output, "base\\sound\\soundbanks\\sfx_container.json"))
+    parallel = util.Parallel("Converting bnk files")
+
+    for file in util.find_files(args.output, ".bnk"):
+        parallel.run(
+            bnk_reader.convert_bnk,
+            os.path.join(args.output, file),
+            os.path.join(args.output, "extracted",
+                         file.replace(".bnk", ".json"))
+        )
+
+    await parallel.wait()
     pbar.update(1)
 
 
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata and export_sfx."""
-    sfx_mapping.build_sfx_event_index(
+    await sfx_mapping.build_sfx_event_index(
         args.metadata_path,
         args.sfx_path,
         args.output,
@@ -109,10 +118,9 @@ async def move_wwise_files(args: Namespace):
     wwise.move_wwise_files_auto(args.project, args.output_path)
 
 
-async def patch_opuspaks(args: Namespace):
+async def pack_opuspaks(args: Namespace):
     """Patch opuspaks with new opuses."""
-    opuspak.patch_opuspaks(
-        args.map_path, args.input_path, args.paks_path, args.output_path)
+    await opustoolz.repack_sfx(args.opusinfo, args.input_path, args.output_path)
 
 
 async def pack_files(args: Namespace):
@@ -152,10 +160,9 @@ async def _main():
             "isolate_vocals": isolate_vocals,
             "revoice": revoice,
             "merge_vocals": merge_vocals,
-            "sfx_to_opus": sfx_to_opus,
             "wwise_import": wwise_import,
             "move_wwise_files": move_wwise_files,
-            "patch_opuspaks": patch_opuspaks,
+            "pack_opuspaks": pack_opuspaks,
             "pack_files": pack_files,
             "zip": zip_files,
             "workflow": run_workflow,

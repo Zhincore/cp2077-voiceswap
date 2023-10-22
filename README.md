@@ -34,11 +34,10 @@ This project aims to achieve the following:
 5. Separate voice and effects (RVC)
 6. Convert to wanted voice (RVC) **TODO: SFX too**
 7. Merge the new voice and effects (FFmpeg)
-8. (SFX) Convert changed SFX to opus (FFmpeg) **WIP**
-9. Convert the voice lines back to .wem (WWise)
-10. (SFX) Patch converted SFX back into their opuspaks **TODO**
-11. Pack the whole mod as an .archive (WolvenKit)
-12. Zip the mod for distribution
+8. Convert the voice lines back to .wem (WWise)
+9. (SFX) Repack converted SFX back into their opuspaks (OpusToolZ) **TODO**
+10. Pack the whole mod as an .archive (WolvenKit)
+11. Zip the mod for distribution
 
 SFX steps are optional and experimntal and currently only support V's grunts.
 

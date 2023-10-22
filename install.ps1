@@ -1,7 +1,7 @@
 Set-Location libs
 
 # Download CpBnkReader
-Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.1/CpBnkReader.zip -o CpBnkReader.zip
+Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.2/CpBnkReader.zip -o CpBnkReader.zip
 mkdir CpBnkReader
 Set-Location CpBnkReader
 tar -xf ..\CpBnkReader.zip
@@ -9,7 +9,7 @@ Set-Location ..
 Remove-Item CpBnkReader.zip
 
 # Download OpusToolZ
-Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v1.1/OpusToolZ.zip -o OpusToolZ.zip
+Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v2/OpusToolZ.zip -o OpusToolZ.zip
 mkdir OpusToolZ
 Set-Location OpusToolZ
 tar -xf ..\OpusToolZ.zip

@@ -19,7 +19,6 @@ RVC_OUTPUT = CACHE_PATH + "\\voiced"
 SFX_RVC_OUTPUT = CACHE_PATH + "\\voiced_sfx"
 
 MERGED_OUTPUT = CACHE_PATH + "\\merged"
-SFX_CONVERT_OUTPUT = CACHE_PATH + "\\converted_sfx"
 
 WWISE_PROJECT = CACHE_PATH + "\\wwise_project\\wwise_project.wproj"
 WWISE_OUTPUT = CACHE_PATH + "\\complete"

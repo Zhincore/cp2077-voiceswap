@@ -294,24 +294,6 @@ merge_vocals.add_argument(
     default=1,
 )
 
-# Convert sfx to opus
-sfx_to_opus = subcommands.add_parser(
-    "sfx_to_opus", help="Convert SFX back to opus.")
-sfx_to_opus.add_argument(
-    "input_path",
-    type=str,
-    help="Path to folder of new SFX.",
-    default=config.SFX_RVC_OUTPUT,
-    nargs=argparse.OPTIONAL,
-)
-sfx_to_opus.add_argument(
-    "output_path",
-    type=str,
-    help="Path where to output the converted files.",
-    default=config.SFX_CONVERT_OUTPUT,
-    nargs=argparse.OPTIONAL,
-)
-
 # wwise_import
 wwise_import = subcommands.add_parser(
     "wwise_import",
@@ -361,34 +343,27 @@ move_wwise_files.add_argument(
 )
 
 # Convert sfx to opus
-patch_opuspaks = subcommands.add_parser(
-    "patch_opuspaks", help="Patch opuspaks with new opuses.")
-patch_opuspaks.add_argument(
-    "map_path",
-    type=str,
-    help="Path to sfx_map.json file.",
-    default=config.METADATA_PATH+"\\sfx_map.json",
-    nargs=argparse.OPTIONAL,
-)
-patch_opuspaks.add_argument(
+pack_opuspaks = subcommands.add_parser(
+    "pack_opuspaks", help="Patch opuspaks with new opuses.")
+pack_opuspaks.add_argument(
     "input_path",
     type=str,
     help="Path with the new opus files.",
-    default=config.SFX_CONVERT_OUTPUT,
+    default=config.SFX_RVC_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
-patch_opuspaks.add_argument(
-    "paks_path",
-    type=str,
-    help="Path with original opuspak files.",
-    default=config.SFX_CACHE_PATH+"\\base\\sound\\soundbanks",
-    nargs=argparse.OPTIONAL,
-)
-patch_opuspaks.add_argument(
+pack_opuspaks.add_argument(
     "output_path",
     type=str,
     help="Path where to output the patched paks.",
     default=config.SFX_PAKS_OUTPUT+"\\base\\sound\\soundbanks",
+    nargs=argparse.OPTIONAL,
+)
+pack_opuspaks.add_argument(
+    "opusinfo",
+    type=str,
+    help="Path to .opusinfo file.",
+    default=config.SFX_CACHE_PATH+"\\base\\sound\\soundbanks\\sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
