@@ -160,10 +160,10 @@ async def _main():
             "isolate_vocals": isolate_vocals,
             "revoice": revoice,
             "merge_vocals": merge_vocals,
-            "wwise_import": wwise_import,
+            "wwise": wwise_import,
             "move_wwise_files": move_wwise_files,
             "pack_opuspaks": pack_opuspaks,
-            "pack_files": pack_files,
+            "pack": pack_files,
             "zip": zip_files,
             "workflow": run_workflow,
         }.get(args.subcommand, main_default)(args)

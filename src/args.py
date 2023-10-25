@@ -294,9 +294,9 @@ merge_vocals.add_argument(
     default=1,
 )
 
-# wwise_import
+# wwise convert
 wwise_import = subcommands.add_parser(
-    "wwise_import",
+    "wwise",
     help="Import all found audio files to Wwise and runs conversion to .wem."
 )
 wwise_import.add_argument(
@@ -369,7 +369,7 @@ pack_opuspaks.add_argument(
 
 # Pack files
 pack_files = subcommands.add_parser(
-    "pack_files",
+    "pack",
     help="Packs files into a .archive."
 )
 pack_files.add_argument(
