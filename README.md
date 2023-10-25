@@ -2,8 +2,10 @@
 
 Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.  
 
-> ⚠️ This project is rather experimental, don't expect it to be perfect!
+> ⚠️ This project is rather experimental, don't expect it to be perfect!  
 > It's usage and functionality may change as it's still in development.
+
+🗨️ [Join my Discord server](https://discord.gg/5mVrUh34Nd) for support and chat! 
 
 ## Requirements
 
