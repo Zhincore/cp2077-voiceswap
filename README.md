@@ -1,7 +1,9 @@
 # Cyberpunk 2077 - VoiceSwap
 
 Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.  
-Using WolvenKit for modding and RVC for voice conversion.
+
+> ⚠️ This project is rather experimental, don't expect it to be perfect!
+> It's usage and functionality may change as it's still in development.
 
 ## Requirements
 
@@ -133,6 +135,7 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
 - **Phase 6:** `wwise_import` - Import all found audio files to Wwise and runs conversion to .wem.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
+  - **Note:** Wwise might freeze a few times, especially right after opening. In my experience it unfreezes when you let it run.
   - This can take an hour or two on V's voicelines.
 - **Phase 7:** `pack_files [archive_name]` - Packs the files into a `.archive`.
   - Should be pretty quick.
