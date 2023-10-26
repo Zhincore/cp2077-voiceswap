@@ -157,6 +157,7 @@ async def _main():
             "map_sfx": map_sfx,
             "select_sfx": select_sfx,
             "extract_files": extract_files,
+            "export_wem": export_wem,
             "isolate_vocals": isolate_vocals,
             "revoice": revoice,
             "merge_vocals": merge_vocals,
