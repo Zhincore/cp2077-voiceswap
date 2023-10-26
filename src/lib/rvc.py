@@ -21,7 +21,7 @@ async def get_rvc_executable():
     venv = os.getenv("RVC_VENV")
     if venv is None or venv == "":
         venv = await poetry_get_venv(rvc_path)
-    return os.path.join(venv, "Scripts\\python.exe")
+    return os.path.join(rvc_path, venv, "Scripts\\python.exe")
 
 
 async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_path: str):
