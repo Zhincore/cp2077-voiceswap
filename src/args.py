@@ -84,7 +84,7 @@ select_sfx = subcommands.add_parser(
 select_sfx.add_argument(
     "gender",
     type=str,
-    help="Which gender of grunts to export (f or m).",
+    help="Which gender of grunts to export (male or female).",
 )
 select_sfx.add_argument(
     "sfx_path",
@@ -395,18 +395,18 @@ pack_files.add_argument(
 )
 
 # Zip folder
-zip = subcommands.add_parser(
+zip_files = subcommands.add_parser(
     "zip",
     help="Zips a folder for distribution."
 )
-zip.add_argument(
+zip_files.add_argument(
     "archive",
     type=str,
     help="The name to give the archive.",
     default=config.ARCHIVE_NAME,
     nargs=argparse.OPTIONAL,
 )
-zip.add_argument(
+zip_files.add_argument(
     "folder",
     type=str,
     help="The folder to zip.",

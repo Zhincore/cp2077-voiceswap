@@ -22,7 +22,7 @@ MERGED_OUTPUT = CACHE_PATH + "\\merged"
 
 WWISE_PROJECT = CACHE_PATH + "\\wwise_project\\wwise_project.wproj"
 WWISE_OUTPUT = CACHE_PATH + "\\complete"
-SFX_PAKS_OUTPUT = WWISE_OUTPUT
+SFX_PAKS_OUTPUT = CACHE_PATH + "\\complete_sfx"
 
 ARCHIVE_NAME = "voiceswap"
 

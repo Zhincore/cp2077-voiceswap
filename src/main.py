@@ -175,7 +175,7 @@ async def _main():
 
 def main():
     """Main function of the program."""
-    asyncio.run(_main())
+    asyncio.run(asyncio.shield(_main()))
 
 
 if __name__ == "__main__":

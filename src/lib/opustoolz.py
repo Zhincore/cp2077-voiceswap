@@ -9,7 +9,7 @@ async def export_all_sfx(opusinfo_path: str, output_dir: str):
     """Exports all sfx sounds from the given opusinfo and opuspaks."""
 
     tqdm.write("Reading SFX containers...")
-    pbar = tqdm(desc="Exporting SFX")
+    pbar = tqdm(desc="Exporting SFX", unit="file")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -22,10 +22,14 @@ async def export_all_sfx(opusinfo_path: str, output_dir: str):
         stderr=asyncio.subprocess.PIPE
     )
 
+    stderr = False
+
     while not process.stdout.at_eof():
         line = b""
+        stderr = not stderr
         try:
-            line = await asyncio.wait_for(process.stdout.readline(), 5)
+            stream = process.stderr if stderr else process.stdout
+            line = await asyncio.wait_for(stream.readline(), 1)
         except asyncio.TimeoutError:
             pbar.update(0)
 
@@ -66,7 +70,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
         os.path.abspath(input_dir),
         os.path.abspath(output_dir),
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        stderr=asyncio.subprocess.DEVNULL,  # opus-tools spam...
     )
 
     await report_repack_progress(process)
@@ -74,7 +78,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
 
     if result != 0:
         raise SubprocessException(
-            f"Repacking SFX failed with exit code {result}: " + (await process.stderr.read()).decode("utf-8"))
+            f"Repacking SFX failed with exit code {result}")
 
     tqdm.write("Repacked SFX!")
 
@@ -91,7 +95,7 @@ async def report_repack_progress(process):
         try:
             line = await asyncio.wait_for(process.stdout.readline(), 5)
         except asyncio.TimeoutError:
-            pbar.update(0)
+            pass
 
         decoded = line.decode()
         stripped = decoded.strip()
@@ -100,15 +104,15 @@ async def report_repack_progress(process):
             close_pbar()
 
             number = re.search(r"\d+", stripped).group()
-            pbar = tqdm(total=int(number), desc="Packing SFX")
-        elif stripped.startswith("Processing"):
+            pbar = tqdm(total=int(number), desc="Packing SFX", unit="file")
+        elif stripped.startswith("Processed file"):
             pbar.update(1)
 
         elif stripped.startswith("Found"):
             close_pbar()
 
             number = re.search(r"\d+", stripped).group()
-            pbar = tqdm(total=int(number), desc="Loading paks")
+            pbar = tqdm(total=int(number), desc="Loading paks", unit="pak")
         elif stripped.startswith("Loading pak"):
             pbar.update(1)
 
@@ -116,10 +120,12 @@ async def report_repack_progress(process):
             close_pbar()
 
             number = re.search(r"\d+", stripped).group()
-            pbar = tqdm(total=int(number), desc="Writing paks")
+            pbar = tqdm(total=int(number), desc="Writing paks", unit="pak")
         elif stripped.startswith("Wrote"):
             pbar.update(1)
         elif stripped != "":
             tqdm.write(stripped)
+        else:
+            pbar.update(0)
 
     close_pbar()

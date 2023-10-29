@@ -47,6 +47,8 @@ SFX steps are optional and experimntal and currently only support V's grunts.
 
 ## TODO
 
+- Extract only needed hashes of SFX
+
 - [ ] Projects? e.g. separated cache folders and saved settings for phases
 - [ ] Allow main command to run from a specific phase.
 

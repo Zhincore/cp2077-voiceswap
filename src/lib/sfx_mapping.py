@@ -9,7 +9,7 @@ from itertools import chain
 from tqdm import tqdm
 from util import SubprocessException, find_files
 
-bnk_entries = []
+bnk_entries = {}
 opusinfo = {}
 
 
@@ -32,34 +32,38 @@ def link_sfx(map_path: str, sfx_path: str, output_dir: str, gender: str):
     os.makedirs(output_dir, exist_ok=True)
 
     for event_name, event in tqdm(index.items(), desc="Finding wanted events", unit="event"):
-        if not has_all(["generic_"+gender, "set_01"], item["tags"]):
+        if "v" not in event["tags"]:
             continue
 
         for sound in event["sounds"]:
-            if not sound["found"]:
+            if not sound["inPak"] or "v_gender" not in sound or sound["v_gender"] != gender:
                 continue
 
             filename = str(sound["hash"]) + ".opus"
 
-            os.link(
-                os.path.join(sfx_path, filename),
-                os.path.join(output_dir, filename)
-            )
+            output = os.path.join(output_dir, filename)
+            if os.path.exists(output):
+                continue
+
+            os.link(os.path.join(sfx_path, filename), output)
 
 
 async def build_sfx_event_index(metadata_path: str, sfx_path: str, output_path: str):
     """Maps event names to audio source ids"""
 
-    bnk_entries = []
+    bnk_entries = {}
 
     bnk_path = os.path.join(metadata_path, "extracted")
     for file in tqdm(list(find_files(bnk_path, ".json")), desc="Loading bnk files", unit="file"):
         with open(os.path.join(bnk_path, file), "r") as f:
             bnk = json.loads(f.read())
-            bnk_entries.extend(
-                chain(*(s["Entries"]
-                      for s in bnk["Sections"] if s["Type"] == "HIRC"))
-            )
+
+            for entry in chain(*(s["Entries"]
+                                 for s in bnk["Sections"] if s["Type"] == "HIRC")):
+                if entry["Id"] not in bnk_entries:
+                    bnk_entries[entry["Id"]] = []
+
+                bnk_entries[entry["Id"]].append(entry)
 
     tqdm.write("Loading opusinfo...")
 
@@ -118,39 +122,57 @@ async def create_index(event_list, bnk_entries, opusinfo, index: dict = None):
 
 
 def find_sounds(entry_id, switches: list = None, stack: set = None):
-    entry = None
-    switches = switches if switches is not None else []
-    stack = stack if stack is not None else set()
-    stack.add(entry_id)
-
+    entries = None
     try:
-        entry = next(entry for entry in bnk_entries if entry["Id"] == entry_id)
-    except StopIteration:
+        entries = bnk_entries[entry_id]
+    except KeyError:
         return []
 
+    sounds = []
+
+    for entry in entries:
+        sounds.extend(_find_sounds(entry, switches, stack))
+
+    return sounds
+
+
+def _find_sounds(entry, gender: str = None, stack: set = None):
+    stack = stack if stack is not None else set()
+    stack.add(entry["Id"])
+
     if entry["EntryType"] == "Sound":
-        return [find_sound_opusinfo(entry["SourceId"], switches)]
+        return [find_sound_opusinfo(entry["SourceId"], gender)]
     elif entry["EntryType"] == "MusicTrack":
-        return [{
-            "hash": source,
-            "inPak": False,
-            "isMusic": True,
+        return [sound_entry(source, False, True, gender, {
             "filename": str(source)+".wem",
-            "switches": switches,
-        } for source in entry["Sources"]]
+        }) for source in entry["Sources"]]
     elif entry["EntryType"] == "SwitchCntr":
-        switches.append(entry)
+        sounds = []
+
+        for group in entry["Groups"]:
+            _gender = {
+                3111576190: "male",
+                2204441813: "female",
+            }.get(group["SwitchId"], gender)
+
+            sounds.extend(
+                _find_sounds_children(group["Items"], _gender, stack)
+            )
+        return sounds
 
     children = {
-        "RanSeqCntr": lambda: entry["Children"],
-        "MusicRanSeqCntr": lambda: entry["Children"],
-        "MusicSwitchCntr": lambda: entry["Children"],
-        "MusicSegment": lambda: entry["Children"],
-        "SwitchCntr": lambda: entry["Groups"],
-        "Action": lambda: [entry["GameObjectReferenceId"]],
-        "Event": lambda: entry["Events"],
-    }.get(entry["EntryType"], lambda: tqdm.write("Unexpected entry type:", entry["EntryType"]))()
+        "RanSeqCntr": lambda entry: entry["Children"],
+        "MusicRanSeqCntr": lambda entry: entry["Children"],
+        "MusicSwitchCntr": lambda entry: entry["Children"],
+        "MusicSegment": lambda entry: entry["Children"],
+        "Action": lambda entry: [entry["GameObjectReferenceId"]],
+        "Event": lambda entry: entry["Events"],
+    }.get(entry["EntryType"], lambda entry: tqdm.write("Unexpected entry type: " + entry["EntryType"]))(entry)
 
+    return _find_sounds_children(children, gender, stack)
+
+
+def _find_sounds_children(children: list, gender: str, stack: set):
     if children is None:
         return []
 
@@ -161,19 +183,21 @@ def find_sounds(entry_id, switches: list = None, stack: set = None):
             continue
 
         try:
-            sounds.extend(find_sounds(child, switches, stack))
+            sounds.extend(find_sounds(child, gender, stack))
         except RecursionError:
+            # tqdm.write might cause stack error
             print(f"\nRecursionError while scanning {child} from {entry}")
 
     return sounds
 
 
-def find_sound_opusinfo(sound_hash, switches=None):
+def find_sound_opusinfo(sound_hash, gender: str = None):
     index = -1
     try:
         index = opusinfo["OpusHashes"].index(sound_hash)
     except ValueError:
-        return {"hash": sound_hash, "inPak": False, "isMusic": False, "switches": switches}
+        # Not found
+        return sound_entry(sound_hash, False, False, gender)
 
     pak_index = opusinfo["PackIndices"][index]
     index_in_pak = -1
@@ -182,15 +206,24 @@ def find_sound_opusinfo(sound_hash, switches=None):
             index_in_pak = index - (i + 1)
             break
 
-    return {
-        "hash": sound_hash,
-        "inPak": True,
-        "isMusic": False,
+    return sound_entry(sound_hash, True, False, gender, {
         "pak": f"sfx_container_{pak_index}.opuspak",
         "indexInPak": index_in_pak,
         "opusOffset": opusinfo["OpusOffsets"][index],
         "riffOpusOffset": opusinfo["RiffOpusOffsets"][index],
         "opusStreamLength": opusinfo["OpusStreamLengths"][index],
         "wavStreamLength": opusinfo["WavStreamLengths"][index],
-        "switches": switches
+    })
+
+
+def sound_entry(sound_hash: int, in_pak: bool, is_music: bool, gender: str = None, data={}):
+    entry = {
+        "hash": sound_hash,
+        "inPak": in_pak,
+        "isMusic": is_music,
+        **data,
     }
+    if gender is not None:
+        entry["v_gender"] = gender
+
+    return entry
