@@ -149,28 +149,24 @@ async def _main():
     args = parser.parse_args(sys.argv[1:])
 
     # Run subcommand
-    try:
-        await {
-            "clear_cache": clear_cache,
-            "export_sfx": export_sfx,
-            "sfx_metadata": sfx_metadata,
-            "map_sfx": map_sfx,
-            "select_sfx": select_sfx,
-            "extract_files": extract_files,
-            "export_wem": export_wem,
-            "isolate_vocals": isolate_vocals,
-            "revoice": revoice,
-            "merge_vocals": merge_vocals,
-            "wwise": wwise_import,
-            "move_wwise_files": move_wwise_files,
-            "pack_opuspaks": pack_opuspaks,
-            "pack": pack_files,
-            "zip": zip_files,
-            "workflow": run_workflow,
-        }.get(args.subcommand, main_default)(args)
-    except SystemExit as e:
-        if e.code != 0:
-            raise e
+    await {
+        "clear_cache": clear_cache,
+        "export_sfx": export_sfx,
+        "sfx_metadata": sfx_metadata,
+        "map_sfx": map_sfx,
+        "select_sfx": select_sfx,
+        "extract": extract_files,
+        "export_wem": export_wem,
+        "isolate_vocals": isolate_vocals,
+        "revoice": revoice,
+        "merge_vocals": merge_vocals,
+        "wwise": wwise_import,
+        "move_wwise_files": move_wwise_files,
+        "pack_opuspaks": pack_opuspaks,
+        "pack": pack_files,
+        "zip": zip_files,
+        "workflow": run_workflow,
+    }.get(args.subcommand, main_default)(args)
 
 
 def main():

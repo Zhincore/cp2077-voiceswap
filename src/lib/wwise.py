@@ -1,6 +1,7 @@
 import asyncio
 import os
 import re
+import json
 from tqdm import tqdm
 from threading import Thread
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
@@ -23,8 +24,15 @@ def get_wwise_path():
     return os.path.join(path, "Authoring\\x64\\Release\\bin\\")
 
 
-async def create_project(project_path: str):
+def get_wwise_project(folder: str):
+    basename = os.path.basename(folder.replace(r"\\$", ""))
+    return os.path.join(folder, basename+".wproj")
+
+
+async def create_project(project_dir: str):
     """Creates a new Wwise project at the given path if it doesnt exist"""
+
+    project_path = get_wwise_project(project_dir)
 
     # Check existence
     if os.path.exists(project_path):
@@ -45,7 +53,7 @@ async def create_project(project_path: str):
 
     # Find desired quality settings
     conv_id = ""
-    with open(os.path.join(os.path.dirname(project_path), "Conversion Settings\\Factory Conversion Settings.wwu"), "r") as f:
+    with open(os.path.join(project_dir, "Conversion Settings\\Factory Conversion Settings.wwu"), "r") as f:
         settings = f.read()
         findings = re.search(
             r"<Conversion Name=\"Vorbis Quality High\" ID=\"{([\w\-]+)}\">", settings)
@@ -64,12 +72,12 @@ async def create_project(project_path: str):
         f.write(data)
 
 
-async def spawn_wwise(project: str):
+async def spawn_wwise(project_dir: str):
     """Starts Wwise for the given project."""
 
     process = await asyncio.create_subprocess_exec(
         get_wwise_path()+"Wwise.exe",
-        project,
+        get_wwise_project(project_dir),
         "--quiet",
     )
     yield process
@@ -126,10 +134,9 @@ def move_wwise_files(converted_objects: list[dict], output_path: str):
         os.rename(obj["sound:convertedWemFilePath"], output)
 
 
-def move_wwise_files_auto(project_path: str, output_path: str):
+def move_wwise_files_auto(project_dir: str, output_path: str):
     """Tries to find the correct output path for all converted files without the index of converted files."""
 
-    project_dir = os.path.dirname(project_path)
     cache_dir = os.path.join(project_dir, ".cache\\Windows\\SFX")
 
     found_files = []
@@ -156,7 +163,7 @@ def move_wwise_files_auto(project_path: str, output_path: str):
         os.rename(os.path.join(cache_dir, file), new_path)
 
 
-async def _convert_files(input_path: str, project_path: str, output_path: str, waapi):
+async def _convert_files(input_path: str, project_dir: str, output_path: str, waapi):
     # Wait for load
     await wait_waapi_load(waapi)
 
@@ -167,7 +174,7 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
 
     # List all files
     tqdm.write("Starting import...")
-    imports = []
+    to_import = []
 
     for root, _dirs, files in os.walk(input_path):
         path = "\\".join(
@@ -175,14 +182,14 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
 
         for file in files:
             if file.endswith(".wav"):
-                imports.append({
+                to_import.append({
                     "audioFile": os.path.join(os.getcwd(), root, file),
                     "originalsSubFolder": root[len(input_path):],
                     "objectPath": os.path.join(WWISE_OBJECT_PATH, path, "<Sound>"+file),
                 })
 
     # Listen for imports
-    pbar = tqdm(total=len(imports),
+    pbar = tqdm(total=len(to_import),
                 desc="Importing files to Wwise", unit="file")
 
     def on_object_created(*args, **kwargs):
@@ -198,8 +205,9 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     # Start importing
     imported = waapi.call("ak.wwise.core.audio.import", {
         "importOperation": "replaceExisting",
-        "imports": imports,
+        "imports": to_import,
     })["objects"]
+    imported = [obj["id"] for obj in imported if obj["name"].endswith("_wav")]
 
     # Done
     pbar.close()
@@ -211,7 +219,7 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
         target=waapi.call,
         args=("ak.wwise.ui.commands.execute", {
             "command": "ConvertAllPlatform",
-            "objects": [obj["id"] for obj in imported],
+            "objects": imported,
         })
     )
 
@@ -230,11 +238,12 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
                     "sound:convertedWemFilePath"]}
     )
 
-    project_dir = os.path.dirname(project_path)
     cache_dir = os.path.join(project_dir, ".cache")
+
+    os.makedirs(cache_dir, exist_ok=True)
     event_queue, observer = watch_async(cache_dir, recursive=True)
 
-    pbar = tqdm(desc="Converting files", total=len(imports), unit="file")
+    pbar = tqdm(desc="Converting files", total=len(imported), unit="file")
 
     # Start converting
     convert_thread.start()
@@ -245,7 +254,8 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
             if event.src_path.endswith(".wem"):
                 pbar.update(1)
         except asyncio.QueueEmpty:
-            await asyncio.sleep(0.1)
+            pbar.update(0)
+            convert_thread.join(0.5)
 
     # Done
     observer.stop()
@@ -259,9 +269,9 @@ async def _convert_files(input_path: str, project_path: str, output_path: str, w
     tqdm.write("Conversion done!")
 
 
-async def convert_files(input_path: str, project_path: str, output_path: str):
+async def convert_files(input_path: str, project_dir: str, output_path: str):
     """Converts all files in the given folder to Wwise format."""
-    await create_project(project_path)
+    await create_project(project_dir)
 
     tqdm.write("##############################################################")
     tqdm.write("# Opening Wwise in a few seconds, get ready for a jumpscare! #")
@@ -270,7 +280,7 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
     await asyncio.sleep(5)
 
     #  Start the WAAPI server
-    server_spawn = spawn_wwise(project_path)
+    server_spawn = spawn_wwise(project_dir)
     server = await anext(server_spawn)
 
     # Try to estabilish connection
@@ -280,7 +290,7 @@ async def convert_files(input_path: str, project_path: str, output_path: str):
 
     # Run the script
     try:
-        await _convert_files(input_path, project_path, output_path, waapi)
+        await _convert_files(input_path, project_dir, output_path, waapi)
     finally:
         # Close the WAAPI server
         tqdm.write("Closing Wwise...")

@@ -1,11 +1,11 @@
 # Cyberpunk 2077 - VoiceSwap
 
-Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.  
+Tool for automating the creation of AI voice-over mods for Cyberpunk 2077.
 
 > ⚠️ This project is rather experimental, don't expect it to be perfect!  
 > It's usage and functionality may change as it's still in development.
 
-🗨️ [Join my Discord server](https://discord.gg/5mVrUh34Nd) for support and chat! 
+🗨️ [Join my Discord server](https://discord.gg/5mVrUh34Nd) for support and chat!
 
 ## Requirements
 
@@ -123,8 +123,8 @@ You can use these as `voiceswap <subcommand>`.
 Use `voiceswap <subcommand> -h` to display better detailed help.
 
 - `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
-- **Phase 1:** `extract_files [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
-  - Example: `extract_files "v_(?!posessed).*_f_.*"` extracts all female V's voicelines without Johnny-possessed ones (default).
+- **Phase 1:** `extract [regex]` - Extracts files matching specified regex pattern from the game using WolvenKit to the `.cache/archive` folder.
+  - Example: `extract "v_(?!posessed).*_f_.*"` extracts all female V's voicelines without Johnny-possessed ones (default).
   - This usually takes few a minutes, depending on the number of files and drive speed.
 - **Phase 2:** `export_wem` - Converts all .wem files in `.cache/archive` to a usable format in `.cache/raw`.
   - This usually takes a few minutes, too.
@@ -136,12 +136,12 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
   - This may take a few hours on V's voicelines.
 - **Phase 5:** `merge_vocals` - Merge the new vocals with effects.
   - This should take just a few minutes.
-- **Phase 6:** `wwise_import` - Import all found audio files to Wwise and runs conversion to .wem.
+- **Phase 6:** `wwise` - Import all found audio files to Wwise and runs conversion to .wem.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
   - **Note:** Wwise might freeze a few times, especially right after opening. In my experience it unfreezes when you let it run.
   - This can take an hour or two on V's voicelines.
-- **Phase 7:** `pack_files [archive_name]` - Packs the files into a `.archive`.
+- **Phase 7:** `pack [archive_name]` - Packs the files into a `.archive`.
   - Should be pretty quick.
 - **Phase 8:** `zip [archive_name]` - Zips the resulting files for distribution.
   - This final step should be fast too.

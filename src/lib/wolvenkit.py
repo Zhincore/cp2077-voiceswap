@@ -73,6 +73,8 @@ async def pack_files(archive: str, input_path: str, output: str):
         raise SubprocessException(
             "Packing failed with exit code " + str(result))
 
+    tqdm.write("Moving file...")
+
     basename = os.path.basename(input_path)
     dirname = os.path.dirname(input_path)
     result_path = os.path.join(dirname, basename+".archive")
