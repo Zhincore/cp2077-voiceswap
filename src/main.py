@@ -39,10 +39,10 @@ async def sfx_metadata(args: Namespace):
 
     pbar = tqdm(total=3, desc="Extracting SFX metadata")
 
-    await wolvenkit.uncook_json("eventsmetadata\.json", args.output)
+    await wolvenkit.uncook_json("eventsmetadata\\.json", args.output)
     pbar.update(1)
 
-    await wolvenkit.extract_files(".*\.bnk", args.output)
+    await wolvenkit.extract_files(".*\\.bnk", args.output)
     pbar.update(1)
 
     parallel = util.Parallel("Converting bnk files")
@@ -101,11 +101,6 @@ async def revoice(args: Namespace):
 async def merge_vocals(args: Namespace):
     """Merge vocals with effects."""
     await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path, args.voice_vol, args.effect_vol)
-
-
-async def sfx_to_opus(args: Namespace):
-    """Convert files to opuspak opus."""
-    await ffmpeg.convert_opus(args.input_path, args.output_path)
 
 
 async def wwise_import(args: Namespace):

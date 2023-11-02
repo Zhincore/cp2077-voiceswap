@@ -53,7 +53,7 @@ async def create_project(project_dir: str):
 
     # Find desired quality settings
     conv_id = ""
-    with open(os.path.join(project_dir, "Conversion Settings\\Factory Conversion Settings.wwu"), "r") as f:
+    with open(os.path.join(project_dir, "Conversion Settings\\Factory Conversion Settings.wwu"), "r", encoding="utf-8") as f:
         settings = f.read()
         findings = re.search(
             r"<Conversion Name=\"Vorbis Quality High\" ID=\"{([\w\-]+)}\">", settings)
@@ -61,14 +61,14 @@ async def create_project(project_dir: str):
 
     # Patch project settings
     data = ""
-    with open(project_path, "r") as f:
+    with open(project_path, "r", encoding="utf-8") as f:
         data = f.read()
 
     data = re.sub(r"<DefaultConversion(.*)ID=\"\{([\w\-]+)\}\"\/>\n",
-                  "<DefaultConversion\g<1>ID=\"{"+conv_id+"}\"/>\n", data)
+                  r"<DefaultConversion\g<1>ID=\"{"+conv_id+"}\"/>\n", data)
     data = data.replace("Default Conversion Settings", "Vorbis Quality High")
 
-    with open(project_path, "w") as f:
+    with open(project_path, "w", encoding="utf-8") as f:
         f.write(data)
 
 
@@ -88,7 +88,7 @@ async def spawn_wwise(project_dir: str):
             f"Wwise server failed with exit code {result}")
 
 
-async def create_waapi(server: asyncio.subprocess.Process):
+async def create_waapi(server):
     waapi = None
     while server.returncode is None:
         try:
@@ -256,6 +256,10 @@ async def _convert_files(input_path: str, project_dir: str, output_path: str, wa
         except asyncio.QueueEmpty:
             pbar.update(0)
             convert_thread.join(0.5)
+        # Jobs seems finished, wait at most 60 seconds before moving on
+        if pbar.n >= pbar.total:
+            convert_thread.join(60)
+            break
 
     # Done
     observer.stop()

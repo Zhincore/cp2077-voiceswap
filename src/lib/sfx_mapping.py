@@ -104,7 +104,7 @@ async def create_index(event_list, bnk_entries, opusinfo, index: dict = None):
     tqdm.write("Spawning subprocesses...")
 
     loop = asyncio.get_running_loop()
-    with concurrent.futures.ProcessPoolExecutor(max_workers=None, initializer=load_data, initargs=(bnk_entries, opusinfo)) as pool:
+    with concurrent.futures.ProcessPoolExecutor(initializer=load_data, initargs=(bnk_entries, opusinfo)) as pool:
         pbar = tqdm(total=len(event_list),
                     desc="Scanning events", unit="event")
 
@@ -118,7 +118,8 @@ async def create_index(event_list, bnk_entries, opusinfo, index: dict = None):
 
         await asyncio.gather(*(do_task(event) for event in event_list))
 
-    return index
+    # Sort the index
+    return dict(sorted(index.items()))
 
 
 def find_sounds(entry_id, switches: list = None, stack: set = None):
@@ -162,6 +163,7 @@ def _find_sounds(entry, gender: str = None, stack: set = None):
 
     children = {
         "RanSeqCntr": lambda entry: entry["Children"],
+        "LayerCntr": lambda entry: entry["Children"],
         "MusicRanSeqCntr": lambda entry: entry["Children"],
         "MusicSwitchCntr": lambda entry: entry["Children"],
         "MusicSegment": lambda entry: entry["Children"],
@@ -186,7 +188,7 @@ def _find_sounds_children(children: list, gender: str, stack: set):
             sounds.extend(find_sounds(child, gender, stack))
         except RecursionError:
             # tqdm.write might cause stack error
-            print(f"\nRecursionError while scanning {child} from {entry}")
+            print(f"\nRecursionError while scanning {child}, stack: {stack}")
 
     return sounds
 
