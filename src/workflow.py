@@ -8,12 +8,12 @@ import main
 def print_header(header: str):
     text = "# " + header + " #"
     width = len(text)
-    tqdm.write()
-    tqdm.write()
+    tqdm.write("")
+    tqdm.write("")
     tqdm.write("#" * width)
     tqdm.write(text)
     tqdm.write("#" * width)
-    tqdm.write()
+    tqdm.write("")
 
 
 async def workflow(args: Namespace):
@@ -63,7 +63,7 @@ async def workflow(args: Namespace):
 
     pbar.close()
 
-    tqdm.write()
+    tqdm.write("")
     tqdm.write("Congratulations! The workflow is done!")
     tqdm.write(
         f"Your mod can be found in the current directory as '{args.name}.zip'")
