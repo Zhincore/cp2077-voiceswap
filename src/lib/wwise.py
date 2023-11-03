@@ -65,7 +65,7 @@ async def create_project(project_dir: str):
         data = f.read()
 
     data = re.sub(r"<DefaultConversion(.*)ID=\"\{([\w\-]+)\}\"\/>\n",
-                  r"<DefaultConversion\g<1>ID=\"{"+conv_id+"}\"/>\n", data)
+                  "<DefaultConversion\\g<1>ID=\"{"+conv_id+"}\"/>\n", data)
     data = data.replace("Default Conversion Settings", "Vorbis Quality High")
 
     with open(project_path, "w", encoding="utf-8") as f:
