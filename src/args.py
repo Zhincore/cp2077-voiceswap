@@ -110,7 +110,7 @@ select_sfx.add_argument(
 
 # Extract files
 extract_files = subcommands.add_parser(
-    "extract_files",
+    "extract",
     help="Extracts files matching the given regex pattern from the game."
 )
 extract_files.add_argument(
