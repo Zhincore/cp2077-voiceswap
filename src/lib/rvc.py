@@ -75,8 +75,8 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
 
     cwd = os.getcwd()
     paths, _total = find_paths_with_files(input_path)
-    args = chain(*(("--" + k, str(v))
-                   for k, v in kwargs.items() if v is not None))
+    args = [*chain(*(("--" + k, str(v))
+                   for k, v in kwargs.items() if v is not None))]
 
     for path in paths:
         tqdm.write(f"Starting RVC for folder '{path}'...")
