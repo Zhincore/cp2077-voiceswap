@@ -7,7 +7,10 @@ from tqdm import tqdm
 
 async def poetry_get_venv(path: str):
     process = await asyncio.create_subprocess_exec(
-        "poetry", "env", "list", "--full-path",
+        "poetry",
+        "env",
+        "list",
+        "--full-path",
         cwd=path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -24,7 +27,9 @@ async def get_rvc_executable():
     return os.path.join(rvc_path, venv, "python.exe")
 
 
-async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_path: str):
+async def uvr(
+    model: str, input_path: str, output_vocals_path: str, output_rest_path: str
+):
     """Splits audio files to vocals and the rest."""
 
     cwd = os.getcwd()
@@ -65,32 +70,34 @@ async def uvr(model: str, input_path: str, output_vocals_path: str, output_rest_
 
         if result != 0:
             raise SubprocessException(
-                f"Converting files failed with exit code {result}")
+                f"Converting files failed with exit code {result}"
+            )
 
     pbar.close()
 
 
-async def batch_rvc(input_path: str, opt_path: str, **kwargs):
+async def batch_rvc(input_path: str, opt_path: str, f0_path: str = None, **kwargs):
     """Run RVC over given folder."""
 
     cwd = os.getcwd()
     paths, _total = find_paths_with_files(input_path)
-    args = [*chain(*(("--" + k, str(v))
-                   for k, v in kwargs.items() if v is not None))]
+    args = [*chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None))]
 
     for path in paths:
         tqdm.write(f"Starting RVC for folder '{path}'...")
 
         _input_path = os.path.join(cwd, input_path, path)
+        _f0_path = os.path.join(cwd, f0_path, path) if f0_path else _input_path
         _opt_path = os.path.join(cwd, opt_path, path)
 
         os.makedirs(_opt_path, exist_ok=True)
 
         process = await asyncio.create_subprocess_exec(
             await get_rvc_executable(),
-            "tools\\infer_batch_rvc.py",
-            "--input_path", _input_path,
-            "--opt_path", _opt_path,
+            os.path.join(cwd, "libs\\infer_batch_rvc.py"),
+            *("--input_path", _input_path),
+            *("--f0_path", _f0_path),
+            *("--opt_path", _opt_path),
             *args,
             cwd=os.getenv("RVC_PATH"),
         )
@@ -98,4 +105,5 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
 
         if result != 0:
             raise SubprocessException(
-                f"Converting files failed with exit code {result}")
+                f"Converting files failed with exit code {result}"
+            )

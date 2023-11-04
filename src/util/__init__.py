@@ -16,7 +16,7 @@ def find_paths_with_files(input_path: str):
     for root, _dirs, files in os.walk(input_path):
         if len(files) > 0:
             total += len(files)
-            paths.append(root[len(input_path)+1:])
+            paths.append(root[len(input_path) + 1 :] or ".")
 
     return paths, total
 
@@ -25,4 +25,4 @@ def find_files(input_path: str, ext: str = None):
     for root, _dirs, files in os.walk(input_path):
         for file in files:
             if not ext or file.endswith(ext):
-                yield os.path.join(root[len(input_path)+1:], file)
+                yield os.path.join(root[len(input_path) + 1 :], file)

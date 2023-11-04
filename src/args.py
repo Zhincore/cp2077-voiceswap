@@ -11,16 +11,10 @@ subcommands = main.add_subparsers(title="subcommands", dest="subcommand")
 help = subcommands.add_parser("help", help="Shows help.")
 
 # Clear cache
-clear = subcommands.add_parser(
-    "clear_cache",
-    help="Deletes the .cache folder."
-)
+clear = subcommands.add_parser("clear_cache", help="Deletes the .cache folder.")
 
 # Export all SFX files
-export_sfx = subcommands.add_parser(
-    "export_sfx",
-    help="Export all SFX audio files."
-)
+export_sfx = subcommands.add_parser("export_sfx", help="Export all SFX audio files.")
 export_sfx.add_argument(
     "output",
     type=str,
@@ -32,14 +26,14 @@ export_sfx.add_argument(
     "opusinfo",
     type=str,
     help="Path to .opusinfo file.",
-    default=config.SFX_EXPORT_PATH+"\\base\\sound\\soundbanks\\sfx_container.opusinfo",
+    default=config.SFX_EXPORT_PATH
+    + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
 # Extract SFX metadata
 sfx_metadata = subcommands.add_parser(
-    "sfx_metadata",
-    help="Extracts SFX metadata from the game."
+    "sfx_metadata", help="Extracts SFX metadata from the game."
 )
 sfx_metadata.add_argument(
     "output",
@@ -51,8 +45,7 @@ sfx_metadata.add_argument(
 
 # Map SFX events
 map_sfx = subcommands.add_parser(
-    "map_sfx",
-    help="Create a map of SFX events. Needs sfx_metadata and export_sfx."
+    "map_sfx", help="Create a map of SFX events. Needs sfx_metadata and export_sfx."
 )
 map_sfx.add_argument(
     "metadata_path",
@@ -72,14 +65,14 @@ map_sfx.add_argument(
     "output",
     type=str,
     help="Path to json file that will be created with the map.",
-    default=config.METADATA_PATH+"\\sfx_map.json",
+    default=config.METADATA_PATH + "\\sfx_map.json",
     nargs=argparse.OPTIONAL,
 )
 
 # Select SFX files
 select_sfx = subcommands.add_parser(
     "select_sfx",
-    help="Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."
+    help="Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path.",
 )
 select_sfx.add_argument(
     "gender",
@@ -97,7 +90,7 @@ select_sfx.add_argument(
     "map_path",
     type=str,
     help="Path to sfx_map.json file.",
-    default=config.METADATA_PATH+"\\sfx_map.json",
+    default=config.METADATA_PATH + "\\sfx_map.json",
     nargs=argparse.OPTIONAL,
 )
 select_sfx.add_argument(
@@ -110,8 +103,7 @@ select_sfx.add_argument(
 
 # Extract files
 extract_files = subcommands.add_parser(
-    "extract",
-    help="Extracts files matching the given regex pattern from the game."
+    "extract", help="Extracts files matching the given regex pattern from the game."
 )
 extract_files.add_argument(
     "pattern",
@@ -130,8 +122,7 @@ extract_files.add_argument(
 
 # export_wem
 export_wem = subcommands.add_parser(
-    "export_wem",
-    help="Converts all found .wem files to a usable format"
+    "export_wem", help="Converts all found .wem files to a usable format"
 )
 export_wem.add_argument(
     "input",
@@ -150,7 +141,8 @@ export_wem.add_argument(
 
 # Isolate vocals
 isolate_vocals = subcommands.add_parser(
-    "isolate_vocals", help="Splits audio files to vocals and the rest.")
+    "isolate_vocals", help="Splits audio files to vocals and the rest."
+)
 isolate_vocals.add_argument(
     "input",
     type=str,
@@ -173,16 +165,16 @@ isolate_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
-    "-m", "--model",
+    "-m",
+    "--model",
     type=str,
     help="Path to the model to use.",
     default=config.UVR_MODEL,
 )
 
 # Revoice
-revoice = subcommands.add_parser(
-    "revoice", help="Run RVC over given folder.")
-# Copied over from https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/tools/infer_batch_rvc.py
+revoice = subcommands.add_parser("revoice", help="Run RVC over given folder.")
+# Mostly copied over from https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/tools/infer_batch_rvc.py
 revoice.add_argument(
     "--f0up_key",
     type=int,
@@ -200,6 +192,12 @@ revoice.add_argument(
     help="index path, relative to RVC",
 )
 revoice.add_argument(
+    "--f0_path",
+    type=str,
+    default=None,
+    help="input path to use for f0",
+)
+revoice.add_argument(
     "--f0method",
     type=str,
     default="rmvpe",
@@ -215,7 +213,7 @@ revoice.add_argument(
     "--model_name",
     type=str,
     help="Model's filename in assets/weights folder",
-    required=True
+    required=True,
 )
 revoice.add_argument(
     "--index_rate",
@@ -258,8 +256,7 @@ revoice.add_argument(
 )
 
 # Merge vocals
-merge_vocals = subcommands.add_parser(
-    "merge_vocals", help="Merge vocals with effects.")
+merge_vocals = subcommands.add_parser("merge_vocals", help="Merge vocals with effects.")
 merge_vocals.add_argument(
     "vocals_path",
     type=str,
@@ -296,8 +293,7 @@ merge_vocals.add_argument(
 
 # wwise convert
 wwise_import = subcommands.add_parser(
-    "wwise",
-    help="Import all found audio files to Wwise and runs conversion to .wem."
+    "wwise", help="Import all found audio files to Wwise and runs conversion to .wem."
 )
 wwise_import.add_argument(
     "input",
@@ -324,8 +320,8 @@ wwise_import.add_argument(
 # Move Wwise files
 move_wwise_files = subcommands.add_parser(
     "move_wwise_files",
-    help="In case Wwise conversion gets stuck or you do the conversion manually, " +
-    "this command finds the converted files and tries to find their correct location."
+    help="In case Wwise conversion gets stuck or you do the conversion manually, "
+    + "this command finds the converted files and tries to find their correct location.",
 )
 move_wwise_files.add_argument(
     "project",
@@ -344,7 +340,8 @@ move_wwise_files.add_argument(
 
 # Convert sfx to opus
 pack_opuspaks = subcommands.add_parser(
-    "pack_opuspaks", help="Patch opuspaks with new opuses.")
+    "pack_opuspaks", help="Patch opuspaks with new opuses."
+)
 pack_opuspaks.add_argument(
     "input_path",
     type=str,
@@ -356,22 +353,19 @@ pack_opuspaks.add_argument(
     "output_path",
     type=str,
     help="Path where to output the patched paks.",
-    default=config.SFX_PAKS_OUTPUT+"\\base\\sound\\soundbanks",
+    default=config.SFX_PAKS_OUTPUT + "\\base\\sound\\soundbanks",
     nargs=argparse.OPTIONAL,
 )
 pack_opuspaks.add_argument(
     "opusinfo",
     type=str,
     help="Path to .opusinfo file.",
-    default=config.SFX_CACHE_PATH+"\\base\\sound\\soundbanks\\sfx_container.opusinfo",
+    default=config.SFX_CACHE_PATH + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
 # Pack files
-pack_files = subcommands.add_parser(
-    "pack",
-    help="Packs files into a .archive."
-)
+pack_files = subcommands.add_parser("pack", help="Packs files into a .archive.")
 pack_files.add_argument(
     "archive",
     type=str,
@@ -395,10 +389,7 @@ pack_files.add_argument(
 )
 
 # Zip folder
-zip_files = subcommands.add_parser(
-    "zip",
-    help="Zips a folder for distribution."
-)
+zip_files = subcommands.add_parser("zip", help="Zips a folder for distribution.")
 zip_files.add_argument(
     "archive",
     type=str,
