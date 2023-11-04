@@ -1,7 +1,7 @@
 .venv
 build
 libs/*
-!libs/rvc_uvr.py
+!libs/*.py
 *.egg-info
 .env
 !.env.example
