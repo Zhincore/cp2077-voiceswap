@@ -33,11 +33,6 @@ from infer.modules.vc.modules import VC
 from infer.modules.vc.pipeline import Pipeline
 
 
-try:
-    set_start_method("spawn")
-except RuntimeError:
-    pass
-
 g_vc = None
 g_args = None
 
@@ -442,7 +437,7 @@ def run_worker(file_path, *params):
     _, wav_opt = vc_single(
         vc,
         0,
-        file_path,
+        os.path.join(args.input_path, file_path),
         args.f0up_key,
         args.f0_contrast,
         None,
@@ -455,7 +450,7 @@ def run_worker(file_path, *params):
         args.rms_mix_rate,
         args.protect,
     )
-    out_path = os.path.join(args.opt_path, os.path.basename(file_path))
+    out_path = os.path.join(args.opt_path, file_path)
     wavfile.write(out_path, wav_opt[0], wav_opt[1])
 
 
@@ -466,10 +461,11 @@ def main():
     with Pool(args.batchsize, init_worker, (args,)) as pool:
         # Collect tasks
         audios = []
-        for file in os.listdir(args.input_path):
-            if file.endswith(".wav"):
-                file_path = os.path.join(args.input_path, file)
-                audios.append(file_path)
+        for root, _dirs, files in os.walk(args.input_path):
+            for file in files:
+                if file.endswith(".wav"):
+                    file_path = os.path.join(root, file)
+                    audios.append(file_path)
 
         pbar = tq.tqdm("Converting", total=len(audios), unit="file")
 

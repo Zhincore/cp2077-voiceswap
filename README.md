@@ -140,7 +140,7 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
   - **Warning:** This phase opens an automated Wwise window.  
     If everything goes well, you shouldn't have to touch the window at all, you can minimize it, but don't close it, it will be closed automatically.
   - **Note:** Wwise might freeze a few times, especially right after opening. In my experience it unfreezes when you let it run.
-  - This can take an hour or two on V's voicelines.
+  - This can take just a few minutes or few hours depending on your drive speed.
 - **Phase 7:** `pack [archive_name]` - Packs the files into a `.archive`.
   - Should be pretty quick.
 - **Phase 8:** `zip [archive_name]` - Zips the resulting files for distribution.

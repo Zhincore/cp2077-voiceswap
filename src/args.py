@@ -198,6 +198,12 @@ revoice.add_argument(
     help="multiply pitch contrast",
 )
 revoice.add_argument(
+    "--batchsize",
+    type=int,
+    default=4,
+    help="how many RVC processes to spawn",
+)
+revoice.add_argument(
     "--f0method",
     type=str,
     default="rmvpe",

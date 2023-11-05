@@ -80,28 +80,23 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
     """Run RVC over given folder."""
 
     cwd = os.getcwd()
-    paths, _total = find_paths_with_files(input_path)
-    args = [*chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None))]
 
-    for path in paths:
-        tqdm.write(f"Starting RVC for folder '{path}'...")
+    tqdm.write("Starting RVC...")
 
-        _input_path = os.path.join(cwd, input_path, path)
-        _opt_path = os.path.join(cwd, opt_path, path)
+    _input_path = os.path.join(cwd, input_path)
+    _opt_path = os.path.join(cwd, opt_path)
 
-        os.makedirs(_opt_path, exist_ok=True)
+    os.makedirs(_opt_path, exist_ok=True)
 
-        process = await asyncio.create_subprocess_exec(
-            await get_rvc_executable(),
-            os.path.join(cwd, "libs\\infer_batch_rvc.py"),
-            *("--input_path", _input_path),
-            *("--opt_path", _opt_path),
-            *args,
-            cwd=os.getenv("RVC_PATH"),
-        )
-        result = await process.wait()
+    process = await asyncio.create_subprocess_exec(
+        await get_rvc_executable(),
+        os.path.join(cwd, "libs\\infer_batch_rvc.py"),
+        *("--input_path", _input_path),
+        *("--opt_path", _opt_path),
+        *chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None)),
+        cwd=os.getenv("RVC_PATH"),
+    )
+    result = await process.wait()
 
-        if result != 0:
-            raise SubprocessException(
-                f"Converting files failed with exit code {result}"
-            )
+    if result != 0:
+        raise SubprocessException(f"Converting files failed with exit code {result}")

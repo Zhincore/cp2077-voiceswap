@@ -1,7 +1,7 @@
 Set-Location libs
 
 # Download CpBnkReader
-Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.3/CpBnkReader.zip -o CpBnkReader.zip
+Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.4/CpBnkReader.zip -o CpBnkReader.zip
 mkdir CpBnkReader
 Set-Location CpBnkReader
 tar -xf ..\CpBnkReader.zip
