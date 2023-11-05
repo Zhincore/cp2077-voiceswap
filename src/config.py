@@ -4,6 +4,7 @@ METADATA_PATH = ".metadata"
 SFX_CACHE_PATH = ".sfx_cache"
 CACHE_PATH = ".cache"
 TMP_PATH = ".tmp"
+WEBUI_PATH = "libs\\webui"
 
 SFX_EXPORT_PATH = SFX_CACHE_PATH + "\\exported"
 

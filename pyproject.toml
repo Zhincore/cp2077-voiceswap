@@ -18,7 +18,8 @@ dependencies  = [
   "tqdm",
   "waapi-client",
   "nest-asyncio",
-  "watchdog"
+  "watchdog",
+  "websockets"
 ]
 
 [project.optional-dependencies]
