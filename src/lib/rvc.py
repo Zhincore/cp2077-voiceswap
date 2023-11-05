@@ -64,13 +64,13 @@ async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
         return await future
 
     async def checker():
-        while not uvr_process.stdout.at_eof():
+        while uvr_process.returncode is None:
             try:
                 line = await asyncio.wait_for(uvr_process.stdout.readline(), 5)
                 file = line.decode().strip()
                 if file in callbacks:
                     callbacks[file]()
-                else:
+                elif file != "":
                     tqdm.write(file)
             except asyncio.TimeoutError:
                 pass
@@ -92,9 +92,10 @@ async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
     for path in find_files(input_path):
         parallel.run(process, path)
 
-    await asyncio.gather(parallel.wait(), checker())
-
+    checker_task = asyncio.create_task(checker())
+    await parallel.wait()
     uvr_process.stdin.write_eof()
+    await checker_task
 
     result = await uvr_process.wait()
 
