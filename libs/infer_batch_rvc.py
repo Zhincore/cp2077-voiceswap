@@ -23,6 +23,7 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.multiprocessing import Pool, set_start_method
 from scipy import signal
 from infer.lib.audio import load_audio
 from infer.modules.vc.utils import *
@@ -31,6 +32,14 @@ from configs.config import Config
 from infer.modules.vc.modules import VC
 from infer.modules.vc.pipeline import Pipeline
 
+
+try:
+    set_start_method("spawn")
+except RuntimeError:
+    pass
+
+g_vc = None
+g_args = None
 
 # My modified methods
 
@@ -390,9 +399,6 @@ def arg_parse() -> tuple:
     parser.add_argument("--f0up_key", type=int, default=0)
     parser.add_argument("--input_path", type=str, help="input path")
     parser.add_argument("--index_path", type=str, help="index path")
-    parser.add_argument(
-        "--f0_contrast", type=float, default=1, help="multiply pitch contrast"
-    )
     parser.add_argument("--f0method", type=str, default="harvest", help="harvest or pm")
     parser.add_argument("--opt_path", type=str, help="opt path")
     parser.add_argument("--model_name", type=str, help="store in assets/weight_root")
@@ -403,6 +409,13 @@ def arg_parse() -> tuple:
     parser.add_argument("--resample_sr", type=int, default=0, help="resample sr")
     parser.add_argument("--rms_mix_rate", type=float, default=1, help="rms mix rate")
     parser.add_argument("--protect", type=float, default=0.33, help="protect")
+    # My custom args
+    parser.add_argument(
+        "--f0_contrast", type=float, default=1, help="multiply pitch contrast"
+    )
+    parser.add_argument(
+        "--batchsize", type=int, default=1, help="how many RVC processes to spawn"
+    )
 
     args = parser.parse_args()
     sys.argv = sys.argv[:1]
@@ -410,37 +423,58 @@ def arg_parse() -> tuple:
     return args
 
 
+def init_worker(p_args):
+    global g_vc, g_args
+    g_args = p_args
+
+    config = Config()
+    config.device = p_args.device if p_args.device else config.device
+    config.is_half = p_args.is_half if p_args.is_half else config.is_half
+
+    g_vc = VC(config)
+    g_vc.get_vc(p_args.model_name)
+
+
+def run_worker(file_path, *params):
+    args = g_args
+    vc = g_vc
+
+    _, wav_opt = vc_single(
+        vc,
+        0,
+        file_path,
+        args.f0up_key,
+        args.f0_contrast,
+        None,
+        args.f0method,
+        args.index_path,
+        None,
+        args.index_rate,
+        args.filter_radius,
+        args.resample_sr,
+        args.rms_mix_rate,
+        args.protect,
+    )
+    out_path = os.path.join(args.opt_path, os.path.basename(file_path))
+    wavfile.write(out_path, wav_opt[0], wav_opt[1])
+
+
 def main():
     load_dotenv(".env")
     args = arg_parse()
-    config = Config()
-    config.device = args.device if args.device else config.device
-    config.is_half = args.is_half if args.is_half else config.is_half
-    vc = VC(config)
-    vc.get_vc(args.model_name)
-    audios = os.listdir(args.input_path)
-    for file in tq.tqdm(audios):
-        if file.endswith(".wav"):
-            file_path = os.path.join(args.input_path, file)
 
-            _, wav_opt = vc_single(
-                vc,
-                0,
-                file_path,
-                args.f0up_key,
-                args.f0_contrast,
-                None,
-                args.f0method,
-                args.index_path,
-                None,
-                args.index_rate,
-                args.filter_radius,
-                args.resample_sr,
-                args.rms_mix_rate,
-                args.protect,
-            )
-            out_path = os.path.join(args.opt_path, file)
-            wavfile.write(out_path, wav_opt[0], wav_opt[1])
+    with Pool(args.batchsize, init_worker, (args,)) as pool:
+        # Collect tasks
+        audios = []
+        for file in os.listdir(args.input_path):
+            if file.endswith(".wav"):
+                file_path = os.path.join(args.input_path, file)
+                audios.append(file_path)
+
+        pbar = tq.tqdm("Converting", total=len(audios), unit="file")
+
+        for _ in pool.imap_unordered(run_worker, audios):
+            pbar.update(1)
 
 
 if __name__ == "__main__":
