@@ -3,6 +3,7 @@ WOLVENKIT_EXE = ".\\libs\\WolvenKit\\WolvenKit.CLI.exe"
 METADATA_PATH = ".metadata"
 SFX_CACHE_PATH = ".sfx_cache"
 CACHE_PATH = ".cache"
+TMP_PATH = ".tmp"
 
 SFX_EXPORT_PATH = SFX_CACHE_PATH + "\\exported"
 

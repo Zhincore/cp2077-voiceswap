@@ -51,8 +51,7 @@ async def sfx_metadata(args: Namespace):
         parallel.run(
             bnk_reader.convert_bnk,
             os.path.join(args.output, file),
-            os.path.join(args.output, "extracted",
-                         file.replace(".bnk", ".json"))
+            os.path.join(args.output, "extracted", file.replace(".bnk", ".json")),
         )
 
     await parallel.wait()
@@ -70,8 +69,7 @@ async def map_sfx(args: Namespace):
 
 async def select_sfx(args: Namespace):
     """Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."""
-    sfx_mapping.link_sfx(args.map_path, args.sfx_path,
-                         args.output_dir, args.gender)
+    sfx_mapping.link_sfx(args.map_path, args.sfx_path, args.output_dir, args.gender)
 
 
 async def extract_files(args: Namespace):
@@ -88,7 +86,7 @@ async def export_wem(args: Namespace):
 
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
-    await rvc.uvr(args.model, args.input, args.output_vocals, args.output_rest)
+    await rvc.uvr(args.input, args.output_vocals, args.output_rest)
 
 
 async def revoice(args: Namespace):
@@ -100,7 +98,13 @@ async def revoice(args: Namespace):
 
 async def merge_vocals(args: Namespace):
     """Merge vocals with effects."""
-    await ffmpeg.merge_vocals(args.vocals_path, args.others_path, args.output_path, args.voice_vol, args.effect_vol)
+    await ffmpeg.merge_vocals(
+        args.vocals_path,
+        args.others_path,
+        args.output_path,
+        args.voice_vol,
+        args.effect_vol,
+    )
 
 
 async def wwise_import(args: Namespace):
@@ -135,6 +139,7 @@ async def main_default(_args: Namespace):
 
 async def run_workflow(args: Namespace):
     from workflow import workflow
+
     await workflow(args)
 
 

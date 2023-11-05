@@ -17,7 +17,7 @@ Set-Location ..
 Remove-Item OpusToolZ.zip
 
 # Download WolvenKit
-Invoke-WebRequest https://github.com/WolvenKit/WolvenKit/releases/download/8.11.0/WolvenKit.Console-1.11.0.zip -o WolvenKit.zip
+Invoke-WebRequest https://github.com/WolvenKit/WolvenKit/releases/download/8.11.1/WolvenKit.Console-1.11.1.zip -o WolvenKit.zip
 mkdir WolvenKit
 Set-Location WolvenKit
 tar -xf ..\WolvenKit.zip

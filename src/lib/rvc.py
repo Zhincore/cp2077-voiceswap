@@ -1,8 +1,10 @@
 import os
 import asyncio
-from itertools import chain
-from util import SubprocessException, find_paths_with_files
 from tqdm import tqdm
+from itertools import chain
+from util import Parallel, SubprocessException, find_files
+import lib.ffmpeg as ffmpeg
+import config
 
 
 async def poetry_get_venv(path: str):
@@ -27,53 +29,77 @@ async def get_rvc_executable():
     return os.path.join(rvc_path, venv, "python.exe")
 
 
-async def uvr(
-    model: str, input_path: str, output_vocals_path: str, output_rest_path: str
-):
+async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
     """Splits audio files to vocals and the rest."""
 
     cwd = os.getcwd()
-    paths, total = find_paths_with_files(input_path)
-    pbar = tqdm(total=total, desc="Isolating vocals", unit="file")
 
-    for path in paths:
-        tqdm.write(f"Starting UVR for folder '{path}'...")
+    parallel = Parallel("Isolating vocals")
 
-        process = await asyncio.create_subprocess_exec(
-            await get_rvc_executable(),
-            os.path.join(cwd, "libs\\rvc_uvr.py"),
-            model,
-            os.path.join(cwd, input_path, path),
-            os.path.join(cwd, output_vocals_path, path),
-            os.path.join(cwd, output_rest_path, path),
-            cwd=os.getenv("RVC_PATH"),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,  # usually just ffmpeg spam...
-        )
+    uvr_process = await asyncio.create_subprocess_exec(
+        await get_rvc_executable(),
+        os.path.join(cwd, "libs\\rvc_uvr.py"),
+        os.path.join(cwd, config.TMP_PATH),
+        os.path.join(cwd, output_vocals_path),
+        os.path.join(cwd, output_rest_path),
+        cwd=os.getenv("RVC_PATH"),
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+    )
 
-        while not process.stdout.at_eof():
-            line = b""
+    callbacks = {}
+    loop = asyncio.get_event_loop()
+
+    async def submit(file: str):
+        future = loop.create_future()
+
+        def callback():
+            future.set_result(None)
+            del callbacks[file]
+
+        callbacks[file] = callback
+        uvr_process.stdin.write((file + "\n").encode())
+        await uvr_process.stdin.drain()
+
+        return await future
+
+    async def checker():
+        while not uvr_process.stdout.at_eof():
             try:
-                line = await asyncio.wait_for(process.stdout.readline(), 5)
+                line = await asyncio.wait_for(uvr_process.stdout.readline(), 5)
+                file = line.decode().strip()
+                if file in callbacks:
+                    callbacks[file]()
+                else:
+                    tqdm.write(file)
             except asyncio.TimeoutError:
-                pbar.update(0)
+                pass
 
-            decoded = line.decode()
-            stripped = decoded.strip()
+    async def process(path):
+        os.makedirs(os.path.join(config.TMP_PATH, os.path.dirname(path)), exist_ok=True)
 
-            if stripped.endswith("->Success"):
-                pbar.update(1)
-            elif stripped != "":
-                tqdm.write(decoded)
+        tmp_path = path + ".reformatted.wav"
+        await ffmpeg.convert(
+            os.path.join(input_path, path),
+            os.path.join(config.TMP_PATH, tmp_path),
+            "-vn",
+            *("-c:a", "pcm_s16le"),
+            *("-ac", "2"),
+            *("-ar", "44100"),
+        )
+        await submit(tmp_path)
 
-        result = await process.wait()
+    for path in find_files(input_path):
+        parallel.run(process, path)
 
-        if result != 0:
-            raise SubprocessException(
-                f"Converting files failed with exit code {result}"
-            )
+    await asyncio.gather(parallel.wait(), checker())
 
-    pbar.close()
+    uvr_process.stdin.write_eof()
+
+    result = await uvr_process.wait()
+
+    if result != 0:
+        raise SubprocessException(f"Converting files failed with exit code {result}")
 
 
 async def batch_rvc(input_path: str, opt_path: str, **kwargs):

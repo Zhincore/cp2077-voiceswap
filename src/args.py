@@ -164,13 +164,6 @@ isolate_vocals.add_argument(
     default=config.UVR_OUTPUT_REST,
     nargs=argparse.OPTIONAL,
 )
-isolate_vocals.add_argument(
-    "-m",
-    "--model",
-    type=str,
-    help="Path to the model to use.",
-    default=config.UVR_MODEL,
-)
 
 # Revoice
 revoice = subcommands.add_parser("revoice", help="Run RVC over given folder.")
