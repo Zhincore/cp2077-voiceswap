@@ -8,7 +8,7 @@ main = argparse.ArgumentParser(
 subcommands = main.add_subparsers(title="subcommands", dest="subcommand")
 
 # Help
-help = subcommands.add_parser("help", help="Shows help.")
+help_ = subcommands.add_parser("help", help="Shows help.")
 
 # Clear cache
 clear = subcommands.add_parser("clear_cache", help="Deletes the .cache folder.")
@@ -26,8 +26,7 @@ export_sfx.add_argument(
     "opusinfo",
     type=str,
     help="Path to .opusinfo file.",
-    default=config.SFX_EXPORT_PATH
-    + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
+    default=config.SFX_EXPORT_PATH + "/base/sound/soundbanks/sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
@@ -65,7 +64,7 @@ map_sfx.add_argument(
     "output",
     type=str,
     help="Path to json file that will be created with the map.",
-    default=config.METADATA_PATH + "\\sfx_map.json",
+    default=config.METADATA_PATH + "/sfx_map.json",
     nargs=argparse.OPTIONAL,
 )
 
@@ -90,7 +89,7 @@ select_sfx.add_argument(
     "map_path",
     type=str,
     help="Path to sfx_map.json file.",
-    default=config.METADATA_PATH + "\\sfx_map.json",
+    default=config.METADATA_PATH + "/sfx_map.json",
     nargs=argparse.OPTIONAL,
 )
 select_sfx.add_argument(
@@ -352,14 +351,14 @@ pack_opuspaks.add_argument(
     "output_path",
     type=str,
     help="Path where to output the patched paks.",
-    default=config.SFX_PAKS_OUTPUT + "\\base\\sound\\soundbanks",
+    default=config.SFX_PAKS_OUTPUT + "/base/sound/soundbanks",
     nargs=argparse.OPTIONAL,
 )
 pack_opuspaks.add_argument(
     "opusinfo",
     type=str,
     help="Path to .opusinfo file.",
-    default=config.SFX_CACHE_PATH + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
+    default=config.SFX_CACHE_PATH + "/base/sound/soundbanks/sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 

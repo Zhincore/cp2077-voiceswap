@@ -26,7 +26,7 @@ async def get_rvc_executable():
     venv = os.getenv("RVC_VENV")
     if venv is None or venv == "":
         venv = await poetry_get_venv(rvc_path)
-    return os.path.join(rvc_path, venv, "python.exe")
+    return os.path.join(rvc_path, venv, "python")
 
 
 async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
@@ -38,7 +38,7 @@ async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
 
     uvr_process = await asyncio.create_subprocess_exec(
         await get_rvc_executable(),
-        os.path.join(cwd, "libs\\rvc_uvr.py"),
+        os.path.join(cwd, "libs/rvc_uvr.py"),
         os.path.join(cwd, config.TMP_PATH),
         os.path.join(cwd, output_vocals_path),
         os.path.join(cwd, output_rest_path),
@@ -117,7 +117,7 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
 
     process = await asyncio.create_subprocess_exec(
         await get_rvc_executable(),
-        os.path.join(cwd, "libs\\infer_batch_rvc.py"),
+        os.path.join(cwd, "libs/infer_batch_rvc.py"),
         *("--input_path", _input_path),
         *("--opt_path", _opt_path),
         *chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None)),

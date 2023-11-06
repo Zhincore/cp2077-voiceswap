@@ -10,7 +10,7 @@ async def convert_bnk(bnk_path: str, output_path: str):
     """Converts given bnk file into a json file."""
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\CpBnkReader\\CpBnkReader.exe",
+        "./libs/CpBnkReader/CpBnkReader.exe",
         bnk_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE

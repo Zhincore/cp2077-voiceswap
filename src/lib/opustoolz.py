@@ -14,12 +14,12 @@ async def export_all_sfx(opusinfo_path: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\OpusToolZ\\OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ.exe",
         "extract",
         os.path.abspath(opusinfo_path),
         os.path.abspath(output_dir),
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        stderr=asyncio.subprocess.PIPE,
     )
 
     stderr = False
@@ -50,8 +50,7 @@ async def export_all_sfx(opusinfo_path: str, output_dir: str):
     result = await process.wait()
 
     if result != 0:
-        raise SubprocessException(
-            "Exporting SFX failed with exit code "+str(result))
+        raise SubprocessException("Exporting SFX failed with exit code " + str(result))
 
     tqdm.write("Exported all SFX!")
 
@@ -64,7 +63,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\OpusToolZ\\OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ.exe",
         "repack",
         os.path.abspath(opusinfo_path),
         os.path.abspath(input_dir),
@@ -77,8 +76,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
     result = await process.wait()
 
     if result != 0:
-        raise SubprocessException(
-            f"Repacking SFX failed with exit code {result}")
+        raise SubprocessException(f"Repacking SFX failed with exit code {result}")
 
     tqdm.write("Repacked SFX!")
 
