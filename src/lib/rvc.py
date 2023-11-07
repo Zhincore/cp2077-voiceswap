@@ -1,4 +1,5 @@
 import os
+import shutil
 import asyncio
 from tqdm import tqdm
 from itertools import chain
@@ -29,7 +30,12 @@ async def get_rvc_executable():
     return os.path.join(rvc_path, venv, "python.exe")
 
 
-async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
+async def uvr(
+    input_path: str,
+    output_vocals_path: str,
+    output_rest_path: str,
+    overwrite: bool = True,
+):
     """Splits audio files to vocals and the rest."""
 
     cwd = os.getcwd()
@@ -75,8 +81,22 @@ async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
             except asyncio.TimeoutError:
                 pass
 
+    dontoverwrite = {}
+
+    if not overwrite:
+        for root, _dirs, files in os.walk(output_vocals_path):
+            dontoverwrite[root] = list(files)
+
     async def process(path):
-        os.makedirs(os.path.join(config.TMP_PATH, os.path.dirname(path)), exist_ok=True)
+        path_dir = os.path.dirname(path)
+
+        if not overwrite:
+            basename = os.path.basename(path)
+            for file in dontoverwrite[os.path.join(output_vocals_path, path_dir)]:
+                if file.startswith(basename):
+                    return
+
+        os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
 
         tmp_path = path + ".reformatted.wav"
         await ffmpeg.convert(
@@ -98,9 +118,11 @@ async def uvr(input_path: str, output_vocals_path: str, output_rest_path: str):
     await checker_task
 
     result = await uvr_process.wait()
-
     if result != 0:
         raise SubprocessException(f"Converting files failed with exit code {result}")
+
+    tqdm.write("Cleaning up...")
+    shutil.rmtree(config.TMP_PATH)
 
 
 async def batch_rvc(input_path: str, opt_path: str, **kwargs):

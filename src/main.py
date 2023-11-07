@@ -86,7 +86,7 @@ async def export_wem(args: Namespace):
 
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
-    await rvc.uvr(args.input, args.output_vocals, args.output_rest)
+    await rvc.uvr(args.input, args.output_vocals, args.output_rest, args.overwrite)
 
 
 async def revoice(args: Namespace):

@@ -23,7 +23,7 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.multiprocessing import Pool, set_start_method
+from multiprocessing import Pool
 from scipy import signal
 from infer.lib.audio import load_audio
 from infer.modules.vc.utils import *
@@ -406,6 +406,12 @@ def arg_parse() -> tuple:
     parser.add_argument("--protect", type=float, default=0.33, help="protect")
     # My custom args
     parser.add_argument(
+        "--overwrite",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help="Whether to overwrite old files",
+    )
+    parser.add_argument(
         "--f0_contrast", type=float, default=1, help="multiply pitch contrast"
     )
     parser.add_argument(
@@ -458,17 +464,23 @@ def main():
     load_dotenv(".env")
     args = arg_parse()
 
+    # Collect tasks
+    audios = []
+    for root, _dirs, files in os.walk(args.input_path):
+        for file in files:
+            if not file.endswith(".wav"):
+                continue
+
+            file_path = os.path.join(root[len(args.input_path) + 1 :], file)
+            out_path = os.path.join(args.opt_path, file_path)
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+            if args.overwrite or not os.path.exists(out_path):
+                audios.append(file_path)
+
+    pbar = tq.tqdm("Converting", total=len(audios), unit="file")
+
     with Pool(args.batchsize, init_worker, (args,)) as pool:
-        # Collect tasks
-        audios = []
-        for root, _dirs, files in os.walk(args.input_path):
-            for file in files:
-                if file.endswith(".wav"):
-                    file_path = os.path.join(root, file)
-                    audios.append(file_path)
-
-        pbar = tq.tqdm("Converting", total=len(audios), unit="file")
-
         for _ in pool.imap_unordered(run_worker, audios):
             pbar.update(1)
 

@@ -8,7 +8,7 @@ main = argparse.ArgumentParser(
 subcommands = main.add_subparsers(title="subcommands", dest="subcommand")
 
 # Help
-help = subcommands.add_parser("help", help="Shows help.")
+help_ = subcommands.add_parser("help", help="Shows help.")
 
 # Clear cache
 clear = subcommands.add_parser("clear_cache", help="Deletes the .cache folder.")
@@ -163,6 +163,12 @@ isolate_vocals.add_argument(
     help="Path where to output the rest.",
     default=config.UVR_OUTPUT_REST,
     nargs=argparse.OPTIONAL,
+)
+isolate_vocals.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
 )
 
 # Revoice

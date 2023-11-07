@@ -22,7 +22,7 @@ dependencies  = [
 ]
 
 [project.optional-dependencies]
-dev = ["isort", "autopep8"]
+dev = ["isort"]
 
 [project.scripts]
 voiceswap = "main:main"
