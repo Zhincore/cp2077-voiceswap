@@ -1,12 +1,14 @@
-import os
 import asyncio
+import os
 from asyncio import Semaphore
-from typing_extensions import Awaitable
+
 from tqdm import tqdm
+from typing_extensions import Awaitable
 
 
 class Parallel:
     """Wrapper around semaphore to limit concurrency"""
+
     __processes: list[Awaitable] = []
     __tqdm: tqdm | None = None
 
@@ -23,11 +25,7 @@ class Parallel:
 
     def run(self, func: callable, *args, **kwargs):
         """Runs the given function with limited concurrency."""
-        self.__processes.append(
-            asyncio.create_task(
-                self.__run(func, *args, **kwargs)
-            )
-        )
+        self.__processes.append(asyncio.create_task(self.__run(func, *args, **kwargs)))
 
     def log(self, message: str):
         tqdm.write(message)

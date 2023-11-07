@@ -1,7 +1,8 @@
-import os
 import asyncio
-from util import Parallel, SubprocessException
+import os
 import re
+
+from util import Parallel, SubprocessException
 
 FFMPEG_ARGS = (
     "-nostdin",

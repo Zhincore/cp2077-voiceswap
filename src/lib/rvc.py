@@ -1,11 +1,13 @@
+import asyncio
 import os
 import shutil
-import asyncio
-from tqdm import tqdm
 from itertools import chain
-from util import Parallel, SubprocessException, find_files
-import lib.ffmpeg as ffmpeg
+
+from tqdm import tqdm
+
 import config
+import lib.ffmpeg as ffmpeg
+from util import Parallel, SubprocessException, find_files
 
 
 async def poetry_get_venv(path: str):
@@ -44,7 +46,7 @@ async def uvr(
 
     uvr_process = await asyncio.create_subprocess_exec(
         await get_rvc_executable(),
-        os.path.join(cwd, "libs\\rvc_uvr.py"),
+        os.path.join(cwd, "libs/rvc_uvr.py"),
         os.path.join(cwd, config.TMP_PATH),
         os.path.join(cwd, output_vocals_path),
         os.path.join(cwd, output_rest_path),
@@ -73,7 +75,7 @@ async def uvr(
         while uvr_process.returncode is None:
             try:
                 line = await asyncio.wait_for(uvr_process.stdout.readline(), 5)
-                file = line.decode().strip()
+                file = line.strip()
                 if file in callbacks:
                     callbacks[file]()
                 elif file != "":
@@ -139,7 +141,7 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
 
     process = await asyncio.create_subprocess_exec(
         await get_rvc_executable(),
-        os.path.join(cwd, "libs\\infer_batch_rvc.py"),
+        os.path.join(cwd, "libs/infer_batch_rvc.py"),
         *("--input_path", _input_path),
         *("--opt_path", _opt_path),
         *chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None)),

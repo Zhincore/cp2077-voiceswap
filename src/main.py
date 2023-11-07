@@ -1,48 +1,36 @@
-import sys
+import asyncio
 import os
 import shutil
-import asyncio
+import sys
 from argparse import Namespace
+
 from dotenv import load_dotenv
 from tqdm import tqdm
-import lib.wolvenkit as wolvenkit
-import lib.ffmpeg as ffmpeg
+
+import config
 import lib.bnk_reader as bnk_reader
-import lib.sfx_mapping as sfx_mapping
+import lib.ffmpeg as ffmpeg
 import lib.opustoolz as opustoolz
 import lib.rvc as rvc
+import lib.sfx_mapping as sfx_mapping
+import lib.wolvenkit as wolvenkit
 import lib.ww2ogg as ww2ogg
 import lib.wwise as wwise
 import util
-import config
 from args import main as parser
 
 load_dotenv(".env")
 
 
-async def clear_cache():
-    """Deletes the .cache folder."""
-    shutil.rmtree(config.CACHE_PATH)
-
-
-async def export_sfx(args: Namespace):
-    """Exports all the SFX from the game."""
-    tqdm.write("Extracting SFX containers from the game...")
-    await wolvenkit.extract_files("sfx_container", args.output)
-
-    tqdm.write("Exporting SFX audio files from the containers...")
-    await opustoolz.export_all_sfx(args.opusinfo, args.output)
-
-
 async def sfx_metadata(args: Namespace):
     """Extracts SFX metadata from the game."""
 
-    pbar = tqdm(total=3, desc="Extracting SFX metadata")
+    pbar = tqdm(total=4, desc="Extracting SFX metadata")
 
     await wolvenkit.uncook_json("eventsmetadata\\.json", args.output)
     pbar.update(1)
 
-    await wolvenkit.extract_files(".*\\.bnk", args.output)
+    await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
     pbar.update(1)
 
     parallel = util.Parallel("Converting bnk files")
@@ -57,19 +45,46 @@ async def sfx_metadata(args: Namespace):
     await parallel.wait()
     pbar.update(1)
 
+    await opustoolz.export_info(
+        os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
+        os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
+    )
+    pbar.update(1)
+
 
 async def map_sfx(args: Namespace):
-    """Create a map of SFX events. Needs sfx_metadata and export_sfx."""
+    """Create a map of SFX events. Needs sfx_metadata."""
     await sfx_mapping.build_sfx_event_index(
         args.metadata_path,
-        args.sfx_path,
         args.output,
     )
 
 
-async def select_sfx(args: Namespace):
-    """Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path."""
-    sfx_mapping.link_sfx(args.map_path, args.sfx_path, args.output_dir, args.gender)
+async def extract_sfx(args: Namespace):
+    """Extract wanted SFX from the game."""
+
+    tqdm.write("Finding wanted SFX files...")
+    files = sfx_mapping.select_sfx(args.map_path, args.gender)
+    hashes = set(file["hash"] for file in files)
+    paks = set(file["pak"][len("sfx_container_") : -len(".opuspak")] for file in files)
+    tqdm.write(f"Found {len(hashes)} matching SFX files in {len(paks)} paks.")
+
+    tqdm.write("Extracting SFX containers from the game...")
+
+    await wolvenkit.extract_files(
+        "sfx_container(_(" + "|".join(paks) + ")\\.opuspak|\\.opusinfo)",
+        args.sfx_cache_path,
+    )
+
+    tqdm.write("Extracting SFX audio files from the containers...")
+
+    await opustoolz.extract_sfx(
+        os.path.join(
+            args.sfx_cache_path, "base/sound/soundbanks/sfx_container.opusinfo"
+        ),
+        hashes,
+        os.path.join(args.output, args.gender),
+    )
 
 
 async def extract_files(args: Namespace):
@@ -137,12 +152,6 @@ async def main_default(_args: Namespace):
     parser.print_help()
 
 
-async def run_workflow(args: Namespace):
-    from workflow import workflow
-
-    await workflow(args)
-
-
 async def _main():
     """Main function of the program."""
 
@@ -150,11 +159,9 @@ async def _main():
 
     # Run subcommand
     await {
-        "clear_cache": clear_cache,
-        "export_sfx": export_sfx,
         "sfx_metadata": sfx_metadata,
         "map_sfx": map_sfx,
-        "select_sfx": select_sfx,
+        "extract_sfx": extract_sfx,
         "extract": extract_files,
         "export_wem": export_wem,
         "isolate_vocals": isolate_vocals,
@@ -165,7 +172,6 @@ async def _main():
         "pack_opuspaks": pack_opuspaks,
         "pack": pack_files,
         "zip": zip_files,
-        "workflow": run_workflow,
     }.get(args.subcommand, main_default)(args)
 
 
