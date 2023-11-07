@@ -7,17 +7,18 @@ from argparse import Namespace
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-import config
-import lib.bnk_reader as bnk_reader
-import lib.ffmpeg as ffmpeg
-import lib.opustoolz as opustoolz
-import lib.rvc as rvc
-import lib.sfx_mapping as sfx_mapping
-import lib.wolvenkit as wolvenkit
-import lib.ww2ogg as ww2ogg
-import lib.wwise as wwise
 import util
 from args import main as parser
+from lib import (
+    bnk_reader,
+    ffmpeg,
+    opustoolz,
+    rvc,
+    sfx_mapping,
+    wolvenkit,
+    ww2ogg,
+    wwise,
+)
 
 load_dotenv(".env")
 
