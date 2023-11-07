@@ -163,6 +163,12 @@ isolate_vocals.add_argument(
     default=config.UVR_OUTPUT_REST,
     nargs=argparse.OPTIONAL,
 )
+isolate_vocals.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
+)
 
 # Revoice
 revoice = subcommands.add_parser("revoice", help="Run RVC over given folder.")
