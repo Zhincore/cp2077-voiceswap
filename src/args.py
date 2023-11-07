@@ -1,4 +1,5 @@
 import argparse
+
 import config
 
 main = argparse.ArgumentParser(
@@ -8,28 +9,8 @@ main = argparse.ArgumentParser(
 subcommands = main.add_subparsers(title="subcommands", dest="subcommand")
 
 # Help
-help = subcommands.add_parser("help", help="Shows help.")
+help_ = subcommands.add_parser("help", help="Shows help.")
 
-# Clear cache
-clear = subcommands.add_parser("clear_cache", help="Deletes the .cache folder.")
-
-# Export all SFX files
-export_sfx = subcommands.add_parser("export_sfx", help="Export all SFX audio files.")
-export_sfx.add_argument(
-    "output",
-    type=str,
-    help="Where to put all the SFX audio files.",
-    default=config.SFX_EXPORT_PATH,
-    nargs=argparse.OPTIONAL,
-)
-export_sfx.add_argument(
-    "opusinfo",
-    type=str,
-    help="Path to .opusinfo file.",
-    default=config.SFX_EXPORT_PATH
-    + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
-    nargs=argparse.OPTIONAL,
-)
 
 # Extract SFX metadata
 sfx_metadata = subcommands.add_parser(
@@ -55,49 +36,43 @@ map_sfx.add_argument(
     nargs=argparse.OPTIONAL,
 )
 map_sfx.add_argument(
-    "sfx_path",
-    type=str,
-    help="Where the SFX is exported.",
-    default=config.SFX_EXPORT_PATH,
-    nargs=argparse.OPTIONAL,
-)
-map_sfx.add_argument(
     "output",
     type=str,
     help="Path to json file that will be created with the map.",
-    default=config.METADATA_PATH + "\\sfx_map.json",
+    default=config.SFX_MAP_PATH,
     nargs=argparse.OPTIONAL,
 )
 
 # Select SFX files
-select_sfx = subcommands.add_parser(
-    "select_sfx",
-    help="Create symbolic links in output_dir to SFX in sfx_path that have the configured tags in map_path.",
+extract_sfx = subcommands.add_parser(
+    "extract_sfx",
+    help="Extract V's SFX files of given gender.",
 )
-select_sfx.add_argument(
+extract_sfx.add_argument(
     "gender",
-    type=str,
+    type=lambda a: {"f": "female", "m": "male"}.get(a, a),
+    choices=["male", "female", "f", "m"],
     help="Which gender of grunts to export (male or female).",
 )
-select_sfx.add_argument(
-    "sfx_path",
+extract_sfx.add_argument(
+    "output",
     type=str,
-    help="Path where exported SFX files is stored.",
+    help="Where to put the SFX audio files.",
     default=config.SFX_EXPORT_PATH,
     nargs=argparse.OPTIONAL,
 )
-select_sfx.add_argument(
-    "map_path",
+extract_sfx.add_argument(
+    "--map-path",
     type=str,
     help="Path to sfx_map.json file.",
-    default=config.METADATA_PATH + "\\sfx_map.json",
+    default=config.SFX_MAP_PATH,
     nargs=argparse.OPTIONAL,
 )
-select_sfx.add_argument(
-    "output_dir",
+extract_sfx.add_argument(
+    "--sfx-cache-path",
     type=str,
-    help="Path to json file that will be created with the map.",
-    default=config.SFX_RAW_OUTPUT,
+    help="Path where to store SFX containers.",
+    default=config.SFX_CACHE_PATH,
     nargs=argparse.OPTIONAL,
 )
 
@@ -163,6 +138,12 @@ isolate_vocals.add_argument(
     help="Path where to output the rest.",
     default=config.UVR_OUTPUT_REST,
     nargs=argparse.OPTIONAL,
+)
+isolate_vocals.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
 )
 
 # Revoice
@@ -352,14 +333,14 @@ pack_opuspaks.add_argument(
     "output_path",
     type=str,
     help="Path where to output the patched paks.",
-    default=config.SFX_PAKS_OUTPUT + "\\base\\sound\\soundbanks",
+    default=config.SFX_PAKS_OUTPUT + "/base/sound/soundbanks",
     nargs=argparse.OPTIONAL,
 )
 pack_opuspaks.add_argument(
     "opusinfo",
     type=str,
     help="Path to .opusinfo file.",
-    default=config.SFX_CACHE_PATH + "\\base\\sound\\soundbanks\\sfx_container.opusinfo",
+    default=config.SFX_CACHE_PATH + "/base/sound/soundbanks/sfx_container.opusinfo",
     nargs=argparse.OPTIONAL,
 )
 
@@ -402,32 +383,4 @@ zip_files.add_argument(
     help="The folder to zip.",
     default=config.PACKED_OUTPUT,
     nargs=argparse.OPTIONAL,
-)
-
-# Workflow
-workflow = subcommands.add_parser(
-    "workflow",
-    help="Executes the whole workflow sequentially.",
-    parents=[revoice],
-    conflict_handler="resolve",
-)
-workflow.add_argument(
-    "name",
-    type=str,
-    help="The name of the mod.",
-    default=config.ARCHIVE_NAME,
-    nargs=argparse.OPTIONAL,
-)
-workflow.add_argument(
-    "pattern",
-    type=str,
-    help="The file name regex pattern to match against.",
-    default="v_(?!posessed).*_f_.*",
-    nargs=argparse.OPTIONAL,
-)
-isolate_vocals.add_argument(
-    "--uvr-model",
-    type=str,
-    help="Path to UVR5 model to use for isolating vocals.",
-    default=config.UVR_MODEL,
 )

@@ -95,31 +95,12 @@ But don't worry, this script will do everything for you.
 
 Before starting, open PowerShell (or other command-line) in the project's folder and run `.\.venv\Scripts\activate` to activate venv if you haven't already.
 
-To run all phases described later in a sequential order without needing any further user input  
-use the command `voiceswap workflow [name] --model_name <model> [--index_path <index_path>] [--f0up_key <pitch_shift>] [pattern]`.
-The parameters have following meanings:
-
-**NOTE:** This main command is still work-in-progress, at the moment it is better to execute the phases bellow manually.
-
-- `name` - The name of the mod basically, will be used as archive name. Don't use spaces or special symbols. Example: `ArianaGrandeVO`, default is `voiceswap`
-- `--model_name` - The voice model to use, it has to be the name of a file in RVC's `assets/weights/`. Example: `arianagrandev2.pth`
-- `--index_path` - Optional path to a voice index. Example: `logs/arianagrandev2.index`
-- `--f0up_key` - Optionally pitch shift the audio before converting, this is very useful when the original voice is deeper or higher than the new voice. 12 is one octave up, -12 is one octave down. You can experiment with this in the origin RVC WebUI
-- `pattern` - Regex pattern of voice lines to replace. Default is `v_(?!posessed).*_f_.*` which is all female V's lines but not Johnny-possessed ones.
-  - **Technical note:** The regex is prepended with `\\` and appended with `\.wem$` and is matched agains the full path in game's archive.
-
-Once this command completes successfully, you can find your mod in the root folder of the project as `<name>.zip` (depending on the name you chose).
-
-Use command `voiceswap help` for more paramaters and information.
-
 **Legend:** Parameters in `<angle brackets>` are required, ones in `[square brackets]` are optional.  
 This README only shows important parameters, other parameters have defaults that guarentee seamless flow between phases.
 
 ### Subcommands / Phases
 
-If you want to run only a specific phase of the process, you can use the following subcommands.
-You can use these as `voiceswap <subcommand>`.
-
+You can use these as `voiceswap <subcommand>`.  
 Use `voiceswap <subcommand> -h` to display better detailed help.
 
 - `clear_cache` - Utility command to delete the whole .cache folder, **this removes your whole progress!**
@@ -148,7 +129,7 @@ Use `voiceswap <subcommand> -h` to display better detailed help.
 
 ## Development
 
-- Run `pip install .[dev]` to install development dependencies
+If you want to develop this project, I recommend running `pip install .[dev]` to install development dependencies.
 
 ## Credits
 

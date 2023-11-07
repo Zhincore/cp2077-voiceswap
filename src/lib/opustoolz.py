@@ -1,59 +1,78 @@
-import os
 import asyncio
+import os
 import re
+
 from tqdm import tqdm
+
 from util import SubprocessException
 
 
-async def export_all_sfx(opusinfo_path: str, output_dir: str):
-    """Exports all sfx sounds from the given opusinfo and opuspaks."""
+async def export_info(opusinfo_path: str, output_path: str):
+    """Export opusinfo as JSON."""
 
-    tqdm.write("Reading SFX containers...")
-    pbar = tqdm(desc="Exporting SFX", unit="file")
-
-    os.makedirs(output_dir, exist_ok=True)
+    tqdm.write("Exporting opusinfo...")
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\OpusToolZ\\OpusToolZ.exe",
-        "extract",
+        "./libs/OpusToolZ/OpusToolZ.exe",
+        "info",
         os.path.abspath(opusinfo_path),
-        os.path.abspath(output_dir),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        os.path.abspath(output_path),
     )
-
-    stderr = False
-
-    while not process.stdout.at_eof():
-        line = b""
-        stderr = not stderr
-        try:
-            stream = process.stderr if stderr else process.stdout
-            line = await asyncio.wait_for(stream.readline(), 1)
-        except asyncio.TimeoutError:
-            pbar.update(0)
-
-        decoded = line.decode()
-        stripped = decoded.strip()
-
-        if stripped.startswith("Found"):
-            numbers = re.findall(r"\d+", stripped)
-            total = 0
-            for number in numbers:
-                total += int(number)
-            pbar.reset(total)
-        elif stripped.startswith("Loading") or stripped.startswith("Wrote"):
-            pbar.update(1)
-        elif stripped != "":
-            tqdm.write(stripped)
 
     result = await process.wait()
 
     if result != 0:
         raise SubprocessException(
-            "Exporting SFX failed with exit code "+str(result))
+            "Exporting opusinfo failed with exit code " + str(result)
+        )
 
-    tqdm.write("Exported all SFX!")
+    tqdm.write("Opusinfo exported!")
+
+
+async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
+    """Extracts sfx of given hashes from the given opusinfo and opuspaks."""
+
+    tqdm.write("Reading SFX containers...")
+    pbar = tqdm(total=len(hashes), desc="Extracting SFX", unit="file")
+
+    process = await asyncio.create_subprocess_exec(
+        "./libs/OpusToolZ/OpusToolZ.exe",
+        "extract",
+        os.path.abspath(opusinfo_path),
+        os.path.abspath(output_dir),
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+    )
+
+    while not process.stdout.at_eof():
+        line = b""
+        try:
+            line = await asyncio.wait_for(process.stdout.readline(), 1)
+        except asyncio.TimeoutError:
+            pbar.update(0)
+
+        stripped = line.decode().strip()
+
+        if stripped.startswith("Awaiting"):
+            # Give hashes
+            process.stdin.write(("\n".join(map(str, hashes)) + "\n\n").encode())
+            await process.stdin.drain()
+        elif stripped.startswith("Wrote"):
+            pbar.update(1)
+        elif (
+            stripped != ""
+            and not stripped.startswith("Found")
+            and not stripped.startswith("Loading")
+        ):
+            tqdm.write(stripped)
+
+    result = await process.wait()
+    pbar.close()
+
+    if result != 0:
+        raise SubprocessException("Exporting SFX failed with exit code " + str(result))
+
+    tqdm.write("SFX exported!")
 
 
 async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
@@ -64,21 +83,19 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
 
     process = await asyncio.create_subprocess_exec(
-        ".\\libs\\OpusToolZ\\OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ.exe",
         "repack",
         os.path.abspath(opusinfo_path),
         os.path.abspath(input_dir),
         os.path.abspath(output_dir),
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,  # opus-tools spam...
     )
 
     await report_repack_progress(process)
     result = await process.wait()
 
     if result != 0:
-        raise SubprocessException(
-            f"Repacking SFX failed with exit code {result}")
+        raise SubprocessException(f"Repacking SFX failed with exit code {result}")
 
     tqdm.write("Repacked SFX!")
 
@@ -97,8 +114,7 @@ async def report_repack_progress(process):
         except asyncio.TimeoutError:
             pass
 
-        decoded = line.decode()
-        stripped = decoded.strip()
+        stripped = line.decode().strip()
 
         if stripped.startswith("Found") and stripped.endswith("files to pack."):
             close_pbar()
@@ -106,14 +122,6 @@ async def report_repack_progress(process):
             number = re.search(r"\d+", stripped).group()
             pbar = tqdm(total=int(number), desc="Packing SFX", unit="file")
         elif stripped.startswith("Processed file"):
-            pbar.update(1)
-
-        elif stripped.startswith("Found"):
-            close_pbar()
-
-            number = re.search(r"\d+", stripped).group()
-            pbar = tqdm(total=int(number), desc="Loading paks", unit="pak")
-        elif stripped.startswith("Loading pak"):
             pbar.update(1)
 
         elif stripped.startswith("Will write"):

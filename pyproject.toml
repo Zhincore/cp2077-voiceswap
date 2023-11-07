@@ -23,7 +23,7 @@ dependencies  = [
 ]
 
 [project.optional-dependencies]
-dev = ["isort", "autopep8"]
+dev = ["isort", "pygls", "lsprotocol", "black"]
 
 [project.scripts]
 voiceswap = "main:main"
