@@ -1,7 +1,9 @@
-import os
 import asyncio
+import os
 from http import HTTPStatus
+
 import websockets
+
 import config
 
 WEBUI_PATH = os.path.join(os.getcwd(), config.WEBUI_PATH)
@@ -26,8 +28,8 @@ def _send_file(path: str):
 
 
 async def _websocket_handler(websocket):
-    for message in websocket:
-        websocket.send(message)
+    async for message in websocket:
+        await websocket.send(message)
 
 
 async def _request_handler(path, request):
@@ -60,5 +62,7 @@ def main():
     asyncio.run(_main())
 
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()
