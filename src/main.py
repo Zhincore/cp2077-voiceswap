@@ -7,7 +7,6 @@ from argparse import Namespace
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-import config
 import util
 from args import main as parser
 from lib import (
