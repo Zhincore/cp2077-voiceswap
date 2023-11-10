@@ -59,7 +59,7 @@ async def pack_files(archive: str, input_path: str, output: str):
     """Pack given folder into a .archive"""
     tqdm.write("Starting WolvenKit pack...")
 
-    input_path = re.sub(r"[\/]$", "", input_path)
+    input_path = re.sub(r"[\\/]+$", "", input_path)
 
     process = await asyncio.create_subprocess_exec(
         WOLVENKIT_EXE, "pack", "-p", input_path

@@ -4,7 +4,8 @@ import re
 
 from tqdm import tqdm
 
-from util import SubprocessException
+from lib import ffmpeg
+from util import Parallel, SubprocessException, find_files
 
 
 async def export_info(opusinfo_path: str, output_path: str):
@@ -72,6 +73,20 @@ async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
     if result != 0:
         raise SubprocessException("Exporting SFX failed with exit code " + str(result))
 
+    parallel = Parallel("Converting SFX to wavs")
+
+    async def convert(file: str):
+        await ffmpeg.to_wav(
+            os.path.join(output_dir, file),
+            os.path.join(output_dir, file.replace(".opus", ".wav")),
+        )
+        os.unlink(file)
+
+    for file in find_files(output_dir, ".opus"):
+        parallel.run(convert, file)
+
+    await parallel.wait()
+
     tqdm.write("SFX exported!")
 
 
@@ -91,7 +106,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
         stdout=asyncio.subprocess.PIPE,
     )
 
-    await report_repack_progress(process)
+    await _report_repack_progress(process)
     result = await process.wait()
 
     if result != 0:
@@ -100,7 +115,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
     tqdm.write("Repacked SFX!")
 
 
-async def report_repack_progress(process):
+async def _report_repack_progress(process):
     pbar = None
 
     def close_pbar():

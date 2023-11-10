@@ -11,7 +11,6 @@ SFX_MAP_PATH = METADATA_PATH + "/sfx_map.json"
 WOLVENKIT_OUTPUT = CACHE_PATH + "/archive"
 
 WW2OGG_OUTPUT = CACHE_PATH + "/raw"
-SFX_RAW_OUTPUT = CACHE_PATH + "/raw_sfx"
 
 UVR_MODEL = "onnx_dereverb_By_FoxJoy"
 UVR_OUTPUT_VOCALS = CACHE_PATH + "/split/vocals"

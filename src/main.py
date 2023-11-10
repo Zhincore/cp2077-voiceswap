@@ -7,6 +7,7 @@ from argparse import Namespace
 from dotenv import load_dotenv
 from tqdm import tqdm
 
+import config
 import util
 from args import main as parser
 from lib import (
@@ -112,6 +113,17 @@ async def revoice(args: Namespace):
     await rvc.batch_rvc(**rest_args)
 
 
+async def revoice_sfx(args: Namespace):
+    """Run RVC over SFX in given folder."""
+    input_path = os.path.join(args.input_path, args.gender)
+
+    rest_args = dict(args.__dict__)
+    del rest_args["subcommand"]
+    del rest_args["gender"]
+    rest_args["input_path"] = input_path
+    await rvc.batch_rvc(**rest_args)
+
+
 async def merge_vocals(args: Namespace):
     """Merge vocals with effects."""
     await ffmpeg.merge_vocals(
@@ -167,6 +179,7 @@ async def _main():
         "export_wem": export_wem,
         "isolate_vocals": isolate_vocals,
         "revoice": revoice,
+        "revoice_sfx": revoice_sfx,
         "merge_vocals": merge_vocals,
         "wwise": wwise_import,
         "move_wwise_files": move_wwise_files,

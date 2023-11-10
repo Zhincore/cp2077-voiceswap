@@ -101,13 +101,9 @@ async def uvr(
         os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
 
         tmp_path = path + ".reformatted.wav"
-        await ffmpeg.convert(
+        await ffmpeg.to_wav(
             os.path.join(input_path, path),
             os.path.join(config.TMP_PATH, tmp_path),
-            "-vn",
-            *("-c:a", "pcm_s16le"),
-            *("-ac", "2"),
-            *("-ar", "44100"),
         )
         await submit(tmp_path)
 

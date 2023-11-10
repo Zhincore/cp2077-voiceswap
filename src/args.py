@@ -174,7 +174,7 @@ revoice.add_argument(
 revoice.add_argument(
     "--batchsize",
     type=int,
-    default=4,
+    default=1,
     help="how many RVC processes to spawn",
 )
 revoice.add_argument(
@@ -233,6 +233,32 @@ revoice.add_argument(
     type=float,
     default=0.25,
     help="protect soundless vowels or something, 0.5 = disabled",
+)
+
+# Revoice
+revoice_sfx = subcommands.add_parser(
+    "revoice_sfx",
+    help="Run RVC over SFX or given folder.",
+    parents=[revoice],
+    conflict_handler="resolve",
+)
+revoice_sfx.add_argument(
+    "gender",
+    type=lambda a: {"f": "female", "m": "male"}.get(a, a),
+    choices=["male", "female", "f", "m"],
+    help="Which gender of grunts to revoice (male or female).",
+)
+revoice_sfx.add_argument(
+    "--input_path",
+    type=str,
+    help="input path, relative to VoiceSwap",
+    default=config.SFX_EXPORT_PATH,
+)
+revoice_sfx.add_argument(
+    "--opt_path",
+    type=str,
+    help="output path, relative to VoiceSwap",
+    default=config.SFX_RVC_OUTPUT,
 )
 
 # Merge vocals

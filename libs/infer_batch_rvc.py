@@ -1,8 +1,8 @@
 import argparse
+import logging
 import os
 import sys
 import traceback
-import logging
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
@@ -11,7 +11,6 @@ import sys
 import tqdm as tq
 from dotenv import load_dotenv
 from scipy.io import wavfile
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,45 +22,18 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
-from multiprocessing import Pool
-from scipy import signal
-from infer.lib.audio import load_audio
-from infer.modules.vc.utils import *
-
 from configs.config import Config
+from infer.lib.audio import load_audio
 from infer.modules.vc.modules import VC
-from infer.modules.vc.pipeline import Pipeline
-
+from infer.modules.vc.pipeline import Pipeline, ah, bh, change_rms
+from infer.modules.vc.utils import *
+from scipy import signal
+from torch.multiprocessing import Pool
 
 g_vc = None
 g_args = None
 
 # My modified methods
-
-
-bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
-
-
-def change_rms(data1, sr1, data2, sr2, rate):  # 1是输入音频，2是输出音频,rate是2的占比
-    # print(data1.max(),data2.max())
-    rms1 = librosa.feature.rms(
-        y=data1, frame_length=sr1 // 2 * 2, hop_length=sr1 // 2
-    )  # 每半秒一个点
-    rms2 = librosa.feature.rms(y=data2, frame_length=sr2 // 2 * 2, hop_length=sr2 // 2)
-    rms1 = torch.from_numpy(rms1)
-    rms1 = F.interpolate(
-        rms1.unsqueeze(0), size=data2.shape[0], mode="linear"
-    ).squeeze()
-    rms2 = torch.from_numpy(rms2)
-    rms2 = F.interpolate(
-        rms2.unsqueeze(0), size=data2.shape[0], mode="linear"
-    ).squeeze()
-    rms2 = torch.max(rms2, torch.zeros_like(rms2) + 1e-6)
-    data2 *= (
-        torch.pow(rms1, torch.tensor(1 - rate))
-        * torch.pow(rms2, torch.tensor(rate - 1))
-    ).numpy()
-    return data2
 
 
 def get_f0(
@@ -393,7 +365,7 @@ def arg_parse() -> tuple:
     parser = argparse.ArgumentParser()
     parser.add_argument("--f0up_key", type=int, default=0)
     parser.add_argument("--input_path", type=str, help="input path")
-    parser.add_argument("--index_path", type=str, help="index path")
+    parser.add_argument("--index_path", type=str, help="index path", default="")
     parser.add_argument("--f0method", type=str, default="harvest", help="harvest or pm")
     parser.add_argument("--opt_path", type=str, help="opt path")
     parser.add_argument("--model_name", type=str, help="store in assets/weight_root")
@@ -429,11 +401,11 @@ def init_worker(p_args):
     g_args = p_args
 
     config = Config()
-    config.device = p_args.device if p_args.device else config.device
-    config.is_half = p_args.is_half if p_args.is_half else config.is_half
+    config.device = g_args.device if g_args.device else config.device
+    config.is_half = g_args.is_half if g_args.is_half else config.is_half
 
     g_vc = VC(config)
-    g_vc.get_vc(p_args.model_name)
+    g_vc.get_vc(g_args.model_name)
 
 
 def run_worker(file_path, *params):
@@ -449,7 +421,7 @@ def run_worker(file_path, *params):
         None,
         args.f0method,
         args.index_path,
-        None,
+        "",
         args.index_rate,
         args.filter_radius,
         args.resample_sr,

@@ -38,6 +38,19 @@ async def convert(source: str, output: str, *args):
         )
 
 
+async def to_wav(source: str, output: str, *args):
+    """Converts source to WAV fromat for RVC/game."""
+    return await convert(
+        source,
+        output,
+        "-vn",
+        *("-c:a", "pcm_s16le"),
+        *("-ac", "2"),
+        *("-ar", "44100"),
+        *args,
+    )
+
+
 async def merge_vocals(
     vocals_path: str,
     others_path: str,
