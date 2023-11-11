@@ -7,11 +7,12 @@ from tqdm import tqdm
 
 import config
 import lib.ffmpeg as ffmpeg
-from util import Parallel, SubprocessException, find_files
+from util import Parallel, SubprocessException, find_files, spawn
 
 
-async def poetry_get_venv(path: str):
-    process = await asyncio.create_subprocess_exec(
+async def _poetry_get_venv(path: str):
+    process = await spawn(
+        "Poetry",
         "poetry",
         "env",
         "list",
@@ -24,11 +25,11 @@ async def poetry_get_venv(path: str):
     return stdout.splitlines()[0].decode()
 
 
-async def get_rvc_executable():
+async def _get_rvc_executable():
     rvc_path = os.getenv("RVC_PATH")
     venv = os.getenv("RVC_VENV")
     if venv is None or venv == "":
-        venv = await poetry_get_venv(rvc_path)
+        venv = await _poetry_get_venv(rvc_path)
     return os.path.join(rvc_path, venv, "python.exe")
 
 
@@ -44,8 +45,9 @@ async def uvr(
 
     parallel = Parallel("Isolating vocals")
 
-    uvr_process = await asyncio.create_subprocess_exec(
-        await get_rvc_executable(),
+    uvr_process = await spawn(
+        "RVC's venv python",
+        await _get_rvc_executable(),
         os.path.join(cwd, "libs/rvc_uvr.py"),
         os.path.join(cwd, config.TMP_PATH),
         os.path.join(cwd, output_vocals_path),
@@ -135,8 +137,9 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
 
     os.makedirs(_opt_path, exist_ok=True)
 
-    process = await asyncio.create_subprocess_exec(
-        await get_rvc_executable(),
+    process = await spawn(
+        "RVC's venv python",
+        await _get_rvc_executable(),
         os.path.join(cwd, "libs/infer_batch_rvc.py"),
         *("--input_path", _input_path),
         *("--opt_path", _opt_path),

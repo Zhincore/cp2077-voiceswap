@@ -7,14 +7,14 @@ import nest_asyncio
 from tqdm import tqdm
 from waapi import CannotConnectToWaapiException, WaapiClient, WaapiRequestFailed
 
-from util import SubprocessException, watch_async
+from util import SubprocessException, spawn, watch_async
 
 nest_asyncio.apply()  # needed for waapi
 
 WWISE_OBJECT_PATH = "\\Actor-Mixer Hierarchy\\Default Work Unit\\"
 
 
-def get_wwise_path():
+def _get_wwise_path():
     """Returns the path to the Wwise executable."""
 
     path = os.getenv("WWISEROOT") or os.getenv("WWWISE_PATH")
@@ -26,7 +26,7 @@ def get_wwise_path():
     return os.path.join(path, "Authoring/x64/Release/bin/")
 
 
-def get_wwise_project(folder: str):
+def _get_wwise_project(folder: str):
     basename = os.path.basename(folder.replace(r"[\/]$", ""))
     return os.path.join(folder, basename + ".wproj")
 
@@ -34,15 +34,16 @@ def get_wwise_project(folder: str):
 async def create_project(project_dir: str):
     """Creates a new Wwise project at the given path if it doesnt exist"""
 
-    project_path = get_wwise_project(project_dir)
+    project_path = _get_wwise_project(project_dir)
 
     # Check existence
     if os.path.exists(project_path):
         return
 
     # Otherwise, create the project
-    process = await asyncio.create_subprocess_exec(
-        get_wwise_path() + "WwiseConsole.exe",
+    process = await spawn(
+        "Wwise",
+        _get_wwise_path() + "WwiseConsole.exe",
         "create-new-project",
         project_path,
         "--quiet",
@@ -86,9 +87,10 @@ async def create_project(project_dir: str):
 async def spawn_wwise(project_dir: str):
     """Starts Wwise for the given project."""
 
-    process = await asyncio.create_subprocess_exec(
-        get_wwise_path() + "Wwise.exe",
-        get_wwise_project(project_dir),
+    process = await spawn(
+        "Wwise",
+        _get_wwise_path() + "Wwise.exe",
+        _get_wwise_project(project_dir),
         "--quiet",
     )
     yield process
@@ -98,7 +100,7 @@ async def spawn_wwise(project_dir: str):
         raise SubprocessException(f"Wwise server failed with exit code {result}")
 
 
-async def create_waapi(server):
+async def _create_waapi(server):
     waapi = None
     while server.returncode is None:
         try:
@@ -201,7 +203,7 @@ async def _convert_files(input_path: str, project_dir: str, output_path: str, wa
 
     for root, _dirs, files in os.walk(input_path):
         path = "\\".join(
-            "<Folder>" + s for s in re.split(r"[\/]", root[len(input_path) :]) if s
+            "<Folder>" + s for s in re.split(r"[\\/]", root[len(input_path) :]) if s
         )
 
         for file in files:
@@ -296,17 +298,13 @@ async def _convert_files(input_path: str, project_dir: str, output_path: str, wa
             convert_thread.join(0.1)
         # Jobs seems finished, wait at most 60 seconds before moving on
         if pbar.n >= pbar.total:
-            print("\nwaiting")
             convert_thread.join(60)
             break
 
     # Done
-    print("\ndone")
     observer.stop()
     pbar.close()
-    handler.unsubscribe()
-    print("\nunsubscribed")
-    waapi.disconnect()
+    # handler.unsubscribe() # Prevents the code from continuing
 
     # Move and rename files
     tqdm.write("Starting moving files...")
@@ -331,7 +329,7 @@ async def convert_files(input_path: str, project_dir: str, output_path: str):
 
     # Try to estabilish connection
     tqdm.write("Trying to connect to Wwise...")
-    waapi = await create_waapi(server)
+    waapi = await _create_waapi(server)
     tqdm.write("Connected!")
 
     # Run the script
@@ -339,15 +337,8 @@ async def convert_files(input_path: str, project_dir: str, output_path: str):
         await _convert_files(input_path, project_dir, output_path, waapi)
     finally:
         # Close the WAAPI server
-        waapi.disconnect()
+        # waapi.disconnect() # hangs
         if server.returncode is None:
             tqdm.write("Closing Wwise...")
             server.terminate()
-            await server.wait()
-            await server.wait()
-            await server.wait()
-            await server.wait()
-            await server.wait()
-            await server.wait()
-            await server.wait()
             await server.wait()

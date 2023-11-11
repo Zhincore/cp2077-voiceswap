@@ -5,7 +5,7 @@ import re
 from tqdm import tqdm
 
 from lib import ffmpeg
-from util import Parallel, SubprocessException, find_files
+from util import Parallel, SubprocessException, find_files, spawn
 
 
 async def export_info(opusinfo_path: str, output_path: str):
@@ -13,7 +13,8 @@ async def export_info(opusinfo_path: str, output_path: str):
 
     tqdm.write("Exporting opusinfo...")
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "OpusToolZ",
         "./libs/OpusToolZ/OpusToolZ.exe",
         "info",
         os.path.abspath(opusinfo_path),
@@ -36,7 +37,8 @@ async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
     tqdm.write("Reading SFX containers...")
     pbar = tqdm(total=len(hashes), desc="Extracting SFX", unit="file")
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "OpusToolZ",
         "./libs/OpusToolZ/OpusToolZ.exe",
         "extract",
         os.path.abspath(opusinfo_path),
@@ -97,7 +99,8 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "OpusToolZ",
         "./libs/OpusToolZ/OpusToolZ.exe",
         "repack",
         os.path.abspath(opusinfo_path),

@@ -1,13 +1,14 @@
 import asyncio
 import os
 
-from util import SubprocessException
+from util import SubprocessException, spawn
 
 
 async def convert_bnk(bnk_path: str, output_path: str):
     """Converts given bnk file into a json file."""
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "CpBnkReader",
         "./libs/CpBnkReader/CpBnkReader.exe",
         bnk_path,
         stdout=asyncio.subprocess.PIPE,

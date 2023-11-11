@@ -1,4 +1,3 @@
-import asyncio
 import os
 import re
 from itertools import chain
@@ -6,7 +5,7 @@ from itertools import chain
 from tqdm import tqdm
 
 from config import WOLVENKIT_EXE
-from util import SubprocessException
+from util import SubprocessException, spawn
 
 
 async def extract_files(pattern: str, output_path: str):
@@ -21,8 +20,13 @@ async def extract_files(pattern: str, output_path: str):
 
     tqdm.write("Starting WolvenKit unbundle...")
 
-    process = await asyncio.create_subprocess_exec(
-        WOLVENKIT_EXE, "unbundle", *(chain(*folders)), "-o", output_path, "-r", pattern
+    process = await spawn(
+        "WolvenKit",
+        WOLVENKIT_EXE,
+        "unbundle",
+        *(chain(*folders)),
+        *("-o", output_path),
+        *("-r", pattern),
     )
     result = await process.wait()
 
@@ -37,16 +41,15 @@ async def uncook_json(pattern: str, output_path: str):
 
     tqdm.write("Starting WolvenKit uncook...")
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "WolvenKit",
         WOLVENKIT_EXE,
         "uncook",
         f"{game_path}/archive/pc/content",
         "-s",
         "-u",
-        "-r",
-        pattern,
-        "-o",
-        output_path,
+        *("-r", pattern),
+        *("-o", output_path),
     )
     result = await process.wait()
 
@@ -61,9 +64,7 @@ async def pack_files(archive: str, input_path: str, output: str):
 
     input_path = re.sub(r"[\\/]+$", "", input_path)
 
-    process = await asyncio.create_subprocess_exec(
-        WOLVENKIT_EXE, "pack", "-p", input_path
-    )
+    process = await spawn("WolvenKit", WOLVENKIT_EXE, "pack", "-p", input_path)
     result = await process.wait()
 
     if result != 0:

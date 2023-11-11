@@ -3,19 +3,18 @@ import os
 
 from tqdm import tqdm
 
-from util import Parallel, SubprocessException
+from util import Parallel, SubprocessException, spawn
 
 
 async def ww2ogg(source: str, output: str):
     """Converts a .wem file to an .ogg file"""
 
-    process = await asyncio.create_subprocess_exec(
+    process = await spawn(
+        "ww2ogg",
         "./libs/ww2ogg/ww2ogg.exe",
         source,
-        "-o",
-        output,
-        "--pcb",
-        "libs/ww2ogg/packed_codebooks_aoTuV_603.bin",
+        *("-o", output),
+        *("--pcb", "libs/ww2ogg/packed_codebooks_aoTuV_603.bin"),
         stdout=asyncio.subprocess.DEVNULL,
     )
     result = await process.wait()
