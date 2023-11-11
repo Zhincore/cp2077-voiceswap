@@ -15,7 +15,7 @@ FFMPEG_ARGS = (
 
 
 def get_ffmpeg():
-    return os.path.join(os.getenv("FFMPEG_PATH"), "ffmpeg.exe")
+    return os.path.join(os.getenv("FFMPEG_PATH"), "ffmpeg")
 
 
 async def convert(source: str, output: str, *args):
