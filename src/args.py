@@ -215,7 +215,7 @@ revoice.add_argument(
 revoice.add_argument(
     "--filter_radius",
     type=int,
-    help="filter radius, works only for harvest f0 method",
+    help="filter radius",
 )
 revoice.add_argument(
     "--resample_sr",

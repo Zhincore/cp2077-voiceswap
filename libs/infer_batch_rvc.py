@@ -52,6 +52,7 @@ def get_f0(
     f0_max = 1100
     f0_mel_min = 1127 * np.log(1 + f0_min / 700)
     f0_mel_max = 1127 * np.log(1 + f0_max / 700)
+
     if not hasattr(self, "model_rmvpe"):
         from infer.lib.rmvpe import RMVPE
 
@@ -62,6 +63,9 @@ def get_f0(
             device=self.device,
         )
     f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
+
+    if filter_radius > 2:
+        f0 = signal.medfilt(f0, filter_radius)
 
     # pitch change
     f0 *= pow(2, f0_up_key / 12)
@@ -369,12 +373,12 @@ def arg_parse() -> tuple:
     parser.add_argument("--f0method", type=str, default="harvest", help="harvest or pm")
     parser.add_argument("--opt_path", type=str, help="opt path")
     parser.add_argument("--model_name", type=str, help="store in assets/weight_root")
-    parser.add_argument("--index_rate", type=float, default=0.66, help="index rate")
+    parser.add_argument("--index_rate", type=float, default=0.9, help="index rate")
     parser.add_argument("--device", type=str, help="device")
     parser.add_argument("--is_half", type=bool, help="use half -> True")
     parser.add_argument("--filter_radius", type=int, default=3, help="filter radius")
     parser.add_argument("--resample_sr", type=int, default=0, help="resample sr")
-    parser.add_argument("--rms_mix_rate", type=float, default=1, help="rms mix rate")
+    parser.add_argument("--rms_mix_rate", type=float, default=0.5, help="rms mix rate")
     parser.add_argument("--protect", type=float, default=0.33, help="protect")
     # My custom args
     parser.add_argument(
