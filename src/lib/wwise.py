@@ -43,7 +43,7 @@ async def create_project(project_dir: str):
     # Otherwise, create the project
     process = await spawn(
         "Wwise",
-        _get_wwise_path() + "WwiseConsole.exe",
+        _get_wwise_path() + "WwiseConsole",
         "create-new-project",
         project_path,
         "--quiet",
@@ -89,7 +89,7 @@ async def spawn_wwise(project_dir: str):
 
     process = await spawn(
         "Wwise",
-        _get_wwise_path() + "Wwise.exe",
+        _get_wwise_path() + "Wwise",
         _get_wwise_project(project_dir),
         "--quiet",
     )

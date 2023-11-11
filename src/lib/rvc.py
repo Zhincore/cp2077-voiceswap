@@ -30,7 +30,7 @@ async def _get_rvc_executable():
     venv = os.getenv("RVC_VENV")
     if venv is None or venv == "":
         venv = await _poetry_get_venv(rvc_path)
-    return os.path.join(rvc_path, venv, "python.exe")
+    return os.path.join(rvc_path, venv, "python")
 
 
 async def uvr(

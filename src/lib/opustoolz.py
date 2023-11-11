@@ -15,7 +15,7 @@ async def export_info(opusinfo_path: str, output_path: str):
 
     process = await spawn(
         "OpusToolZ",
-        "./libs/OpusToolZ/OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ",
         "info",
         os.path.abspath(opusinfo_path),
         os.path.abspath(output_path),
@@ -39,7 +39,7 @@ async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
 
     process = await spawn(
         "OpusToolZ",
-        "./libs/OpusToolZ/OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ",
         "extract",
         os.path.abspath(opusinfo_path),
         os.path.abspath(output_dir),
@@ -101,7 +101,7 @@ async def repack_sfx(opusinfo_path: str, input_dir: str, output_dir: str):
 
     process = await spawn(
         "OpusToolZ",
-        "./libs/OpusToolZ/OpusToolZ.exe",
+        "./libs/OpusToolZ/OpusToolZ",
         "repack",
         os.path.abspath(opusinfo_path),
         os.path.abspath(input_dir),

@@ -9,7 +9,7 @@ async def convert_bnk(bnk_path: str, output_path: str):
 
     process = await spawn(
         "CpBnkReader",
-        "./libs/CpBnkReader/CpBnkReader.exe",
+        "./libs/CpBnkReader/CpBnkReader",
         bnk_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,

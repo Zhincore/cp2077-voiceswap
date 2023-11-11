@@ -15,7 +15,7 @@ FFMPEG_ARGS = (
 async def _spawn_ffmpeg(*args, **kwargs):
     return await spawn(
         "FFmpeg",
-        os.path.join(os.getenv("FFMPEG_PATH"), "ffmpeg.exe"),
+        os.path.join(os.getenv("FFMPEG_PATH"), "ffmpeg"),
         *FFMPEG_ARGS,
         *args,
         **kwargs,

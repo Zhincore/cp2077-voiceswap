@@ -11,7 +11,7 @@ async def ww2ogg(source: str, output: str):
 
     process = await spawn(
         "ww2ogg",
-        "./libs/ww2ogg/ww2ogg.exe",
+        "./libs/ww2ogg/ww2ogg",
         source,
         *("-o", output),
         *("--pcb", "libs/ww2ogg/packed_codebooks_aoTuV_603.bin"),
