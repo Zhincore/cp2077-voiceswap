@@ -337,8 +337,8 @@ async def convert_files(input_path: str, project_dir: str, output_path: str):
         await _convert_files(input_path, project_dir, output_path, waapi)
     finally:
         # Close the WAAPI server
-        # waapi.disconnect() # hangs
         if server.returncode is None:
             tqdm.write("Closing Wwise...")
             server.terminate()
             await server.wait()
+        waapi.disconnect()

@@ -20,7 +20,7 @@ sfx_metadata.add_argument(
     "output",
     type=str,
     help="Where to put the metadata.",
-    default=config.METADATA_PATH,
+    default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
 )
 
@@ -32,7 +32,7 @@ map_sfx.add_argument(
     "metadata_path",
     type=str,
     help="Path where SFX metadata is stored.",
-    default=config.METADATA_PATH,
+    default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
 )
 map_sfx.add_argument(
@@ -40,6 +40,25 @@ map_sfx.add_argument(
     type=str,
     help="Path to json file that will be created with the map.",
     default=config.SFX_MAP_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
+# Extract subtitles
+extract_subtitles = subcommands.add_parser(
+    "extract_subtitles", help="Extract subttiles and their audio file names."
+)
+extract_subtitles.add_argument(
+    "locale",
+    type=str,
+    help="What locale of subtitles to extract.",
+    default="cz-cz",
+    nargs=argparse.OPTIONAL,
+)
+extract_subtitles.add_argument(
+    "output",
+    type=str,
+    help="Path to file where the subtitles will be put.",
+    default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
 )
 
@@ -146,6 +165,53 @@ isolate_vocals.add_argument(
     help="Whether to overwrite old files",
 )
 
+# TTS
+tts = subcommands.add_parser("tts", help="Converts subtitles to speech.")
+tts.add_argument(
+    "gender",
+    type=lambda a: {"f": "female", "m": "male"}.get(a, a),
+    choices=["male", "female", "f", "m"],
+    help="Which gender of V to process (male or female).",
+)
+tts.add_argument(
+    "locale",
+    type=str,
+    help="What locale of subtitles to use.",
+    default="cz-cz",
+)
+tts.add_argument(
+    "language",
+    type=str,
+    help="What language of TTS to use.",
+    default="cs",
+)
+tts.add_argument(
+    "reference",
+    type=str,
+    help="Path to a reference audio file to use for voice.",
+)
+tts.add_argument(
+    "output",
+    type=str,
+    help="Path to file where the subtitles will be put.",
+    default=config.TTS_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+tts.add_argument(
+    "pattern",
+    type=str,
+    help="The file name regex pattern to match against.",
+    default="v_(?!posessed).*_f_.*",
+    nargs=argparse.OPTIONAL,
+)
+tts.add_argument(
+    "--subtitles-path",
+    type=str,
+    help="Path where subtitle files were extracted.",
+    default=config.METADATA_EXTRACT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
 # Revoice
 revoice = subcommands.add_parser("revoice", help="Run RVC over given folder.")
 # Copied over from https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/blob/main/tools/infer_batch_rvc.py
@@ -235,7 +301,7 @@ revoice.add_argument(
     help="protect soundless vowels or something, 0.5 = disabled",
 )
 
-# Revoice
+# Revoice SFX
 revoice_sfx = subcommands.add_parser(
     "revoice_sfx",
     help="Run RVC over SFX or given folder.",

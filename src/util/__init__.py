@@ -19,12 +19,16 @@ def find_paths_with_files(input_path: str):
     return paths, total
 
 
-def find_files(input_path: str, ext: str = None):
+def find_files(input_path: str, ext: str = None, subfolder: str = None):
     """Find files with the given extension"""
     for root, _dirs, files in os.walk(input_path):
+        path = root[len(input_path) + 1 :]
+        if subfolder and subfolder not in path:
+            continue
+
         for file in files:
             if not ext or file.endswith(ext):
-                yield os.path.join(root[len(input_path) + 1 :], file)
+                yield os.path.join(path, file)
 
 
 async def spawn(name, *args, **kwargs):

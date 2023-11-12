@@ -22,6 +22,7 @@ dependencies  = [
 ]
 
 [project.optional-dependencies]
+tts = ["TTS"]
 dev = ["isort", "pygls", "lsprotocol", "black"]
 
 [project.scripts]

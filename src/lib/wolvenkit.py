@@ -8,15 +8,20 @@ from config import WOLVENKIT_EXE
 from util import SubprocessException, spawn
 
 
-async def extract_files(pattern: str, output_path: str):
-    """Extracts files from the game matching the given pattern."""
+def _get_nonmod_folders():
     game_path = os.getenv("CYBERPUNK_PATH")
 
     # Find folders that arent mod
     folders = []
     for folder in os.listdir(game_path + "/archive/pc"):
         if folder != "mod":
-            folders.append(("-p", f"{game_path}/archive/pc/{folder}"))
+            folders.append(f"{game_path}/archive/pc/{folder}")
+
+    return folders
+
+
+async def extract_files(pattern: str, output_path: str):
+    """Extracts files from the game matching the given pattern."""
 
     tqdm.write("Starting WolvenKit unbundle...")
 
@@ -24,7 +29,7 @@ async def extract_files(pattern: str, output_path: str):
         "WolvenKit",
         WOLVENKIT_EXE,
         "unbundle",
-        *(chain(*folders)),
+        *(chain(map(lambda a: ("-p", a), _get_nonmod_folders()))),
         *("-o", output_path),
         *("-r", pattern),
     )
@@ -37,7 +42,6 @@ async def extract_files(pattern: str, output_path: str):
 
 async def uncook_json(pattern: str, output_path: str):
     """Extract json files from the game matching the given pattern."""
-    game_path = os.getenv("CYBERPUNK_PATH")
 
     tqdm.write("Starting WolvenKit uncook...")
 
@@ -45,7 +49,7 @@ async def uncook_json(pattern: str, output_path: str):
         "WolvenKit",
         WOLVENKIT_EXE,
         "uncook",
-        f"{game_path}/archive/pc/content",
+        *_get_nonmod_folders(),
         "-s",
         "-u",
         *("-r", pattern),

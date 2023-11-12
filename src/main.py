@@ -15,6 +15,7 @@ from lib import (
     opustoolz,
     rvc,
     sfx_mapping,
+    tts,
     wolvenkit,
     ww2ogg,
     wwise,
@@ -61,6 +62,20 @@ async def map_sfx(args: Namespace):
     )
 
 
+async def extract_subtitles(args: Namespace):
+    """Extract subttiles and their audio file names."""
+
+    await wolvenkit.uncook_json(
+        "|".join(
+            (
+                "localization\\\\en-us\\\\voiceovermap.*\\.json",
+                f"localization\\\\{args.locale}\\\\subtitles\\\\.*\\.json",
+            ),
+        ),
+        args.output,
+    )
+
+
 async def extract_sfx(args: Namespace):
     """Extract wanted SFX from the game."""
 
@@ -103,6 +118,18 @@ async def export_wem(args: Namespace):
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
     await rvc.uvr(args.input, args.output_vocals, args.output_rest, args.overwrite)
+
+
+async def do_tts(args: Namespace):
+    """Converts subtitles to speech."""
+
+    print(
+        len(
+            tts.map_subtitles(
+                args.subtitles_path, args.locale, args.pattern, args.gender
+            )
+        )
+    )
 
 
 async def revoice(args: Namespace):
@@ -173,10 +200,12 @@ async def _main():
     await {
         "sfx_metadata": sfx_metadata,
         "map_sfx": map_sfx,
+        "extract_subtitles": extract_subtitles,
         "extract_sfx": extract_sfx,
         "extract": extract_files,
         "export_wem": export_wem,
         "isolate_vocals": isolate_vocals,
+        "tts": do_tts,
         "revoice": revoice,
         "revoice_sfx": revoice_sfx,
         "merge_vocals": merge_vocals,
