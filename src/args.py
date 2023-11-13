@@ -191,14 +191,19 @@ tts.add_argument(
     help="Path to a reference audio file to use for voice.",
 )
 tts.add_argument(
-    "output",
+    "--output",
     type=str,
     help="Path to file where the subtitles will be put.",
     default=config.TTS_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 tts.add_argument(
-    "pattern",
+    "--fallback-reference",
+    type=str,
+    help="Path to a reference audio file to use for voice when other was not found.",
+)
+tts.add_argument(
+    "--pattern",
     type=str,
     help="The file name regex pattern to match against.",
     default="v_(?!posessed).*_f_.*",
@@ -211,6 +216,19 @@ tts.add_argument(
     default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
 )
+tts.add_argument(
+    "--batchsize",
+    type=int,
+    default=1,
+    help="how many TTS processes to spawn",
+)
+tts.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
+)
+
 
 # Revoice
 revoice = subcommands.add_parser("revoice", help="Run RVC over given folder.")

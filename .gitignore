@@ -8,4 +8,4 @@ libs/*
 __pycache__
 *.zip
 .cache*
-.*/
+.*

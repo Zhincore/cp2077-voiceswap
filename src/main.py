@@ -123,13 +123,43 @@ async def isolate_vocals(args: Namespace):
 async def do_tts(args: Namespace):
     """Converts subtitles to speech."""
 
-    print(
-        len(
-            tts.map_subtitles(
-                args.subtitles_path, args.locale, args.pattern, args.gender
-            )
-        )
+    vo_map = tts.map_subtitles(
+        args.subtitles_path, args.locale, args.pattern, args.gender
     )
+
+    is_ref_dir = os.path.isdir(args.reference)
+
+    files = []
+    done = []
+    for file, text in tqdm(vo_map.values(), desc="Preparing data", unit="file"):
+        orig_file = file.replace("\\", os.path.sep)
+        file_path = os.path.join(args.output, orig_file.replace(".wem", ".wav"))
+
+        if not args.overwrite and os.path.exists(file_path):
+            continue
+
+        if is_ref_dir:
+            ref = None
+            for f in (".wav", ".ogg"):
+                ref = os.path.join(args.reference, orig_file.replace(".wem", f))
+                if os.path.isfile(ref):
+                    break
+                ref = None
+
+            if not ref:
+                if args.fallback_reference:
+                    ref = args.fallback_reference
+                else:
+                    raise RuntimeError(f"Reference for '{orig_file}' not found.")
+
+            files.append((file_path, text, ref))
+        else:
+            files.append((file_path, text))
+
+    done = len(vo_map) - len(files)
+    tqdm.write(f"Skipping {done} voice lines already done")
+
+    tts.generate_speech(files, args.reference, args.language, args.batchsize)
 
 
 async def revoice(args: Namespace):
