@@ -77,7 +77,7 @@ async def uvr(
         while uvr_process.returncode is None:
             try:
                 line = await asyncio.wait_for(uvr_process.stdout.readline(), 5)
-                file = line.strip()
+                file = line.decode().strip()
                 if file in callbacks:
                     callbacks[file]()
                 elif file != "":
@@ -102,7 +102,7 @@ async def uvr(
 
         os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
 
-        tmp_path = path + ".reformatted.wav"
+        tmp_path = path.replace(".ogg", ".wav")
         await ffmpeg.to_wav(
             os.path.join(input_path, path),
             os.path.join(config.TMP_PATH, tmp_path),
@@ -112,10 +112,12 @@ async def uvr(
     for path in find_files(input_path):
         parallel.run(process, path)
 
-    checker_task = asyncio.create_task(checker())
-    await parallel.wait()
-    uvr_process.stdin.write_eof()
-    await checker_task
+    async def run():
+        await parallel.wait()
+        uvr_process.stdin.write_eof()
+        await uvr_process.stdin.drain()
+
+    await asyncio.gather(run(), checker())
 
     result = await uvr_process.wait()
     if result != 0:

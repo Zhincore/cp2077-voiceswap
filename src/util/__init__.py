@@ -33,10 +33,11 @@ def find_files(input_path: str, ext: str = None, subfolder: str = None):
 
 async def spawn(name, *args, **kwargs):
     """Spawn a process"""
+    if "stdin" not in kwargs:
+        kwargs["stdin"] = asyncio.subprocess.DEVNULL
+
     try:
-        return await asyncio.create_subprocess_exec(
-            *args, stdin=asyncio.subprocess.DEVNULL, **kwargs
-        )
+        return await asyncio.create_subprocess_exec(*args, **kwargs)
     except FileNotFoundError as e:
         raise SubprocessException(f"Could not find {name}!") from e
 
