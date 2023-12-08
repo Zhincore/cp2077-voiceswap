@@ -52,6 +52,9 @@ async def build_sfx_event_index(metadata_path: str, output_path: str):
     for file in tqdm(
         list(find_files(extracted_path, ".json")), desc="Loading bnk files", unit="file"
     ):
+        if file == "sfx_container.opusinfo.json":
+            continue
+
         with open(os.path.join(extracted_path, file), "r", encoding="utf-8") as f:
             bnk = json.load(f)
 

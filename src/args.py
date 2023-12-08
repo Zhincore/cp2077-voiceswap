@@ -26,7 +26,7 @@ sfx_metadata.add_argument(
 
 # Map SFX events
 map_sfx = subcommands.add_parser(
-    "map_sfx", help="Create a map of SFX events. Needs sfx_metadata and export_sfx."
+    "map_sfx", help="Create a map of SFX events. Needs sfx_metadata."
 )
 map_sfx.add_argument(
     "metadata_path",

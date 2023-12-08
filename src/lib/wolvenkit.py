@@ -29,7 +29,7 @@ async def extract_files(pattern: str, output_path: str):
         "WolvenKit",
         WOLVENKIT_EXE,
         "unbundle",
-        *(chain(map(lambda a: ("-p", a), _get_nonmod_folders()))),
+        *(chain(*map(lambda a: ("-p", a), _get_nonmod_folders()))),
         *("-o", output_path),
         *("-r", pattern),
     )

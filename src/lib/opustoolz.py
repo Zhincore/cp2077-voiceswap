@@ -82,7 +82,7 @@ async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
             os.path.join(output_dir, file),
             os.path.join(output_dir, file.replace(".opus", ".wav")),
         )
-        os.unlink(file)
+        os.unlink(os.path.join(output_dir, file))
 
     for file in find_files(output_dir, ".opus"):
         parallel.run(convert, file)
@@ -151,7 +151,7 @@ async def _report_repack_progress(process):
             pbar.update(1)
         elif stripped != "":
             tqdm.write(stripped)
-        else:
+        elif pbar:
             pbar.update(0)
 
     close_pbar()
