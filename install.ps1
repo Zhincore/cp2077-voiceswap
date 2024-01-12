@@ -1,45 +1,72 @@
-Set-Location libs
+<#
+    .SYNOPSIS
+        Installs directly required Librarys and runs Project Setup for CP2077-VOICESWAP
+    .EXAMPLE
+        .\install.ps1 -SkipLibs
+#>
+[CmdletBinding()]
+param (
+    [Parameter(HelpMessage = "Skips Lib Install")]
+    [switch]
+    $SkipLibs
+)
 
-# Download CpBnkReader
-Invoke-WebRequest https://github.com/Zhincore/CpBnkReader/releases/download/v1.4/CpBnkReader.zip -o CpBnkReader.zip
-mkdir CpBnkReader
-Set-Location CpBnkReader
-tar -xf ..\CpBnkReader.zip
-Set-Location ..
-Remove-Item CpBnkReader.zip
+$libs = @{
+    "CpBnkReader" = "https://github.com/Zhincore/CpBnkReader/releases/download/v1.4/CpBnkReader.zip"
+    "OpusToolZ"   = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
+    "WolvenKit"   = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.0/WolvenKit.Console-8.12.0.zip"
+    "ww2ogg"      = "https://github.com/hcs64/ww2ogg/releases/download/0.24/ww2ogg024.zip"
+}
 
-# Download OpusToolZ
-Invoke-WebRequest https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip -o OpusToolZ.zip
-mkdir OpusToolZ
-Set-Location OpusToolZ
-tar -xf ..\OpusToolZ.zip
-Set-Location ..
-Remove-Item OpusToolZ.zip
+function Get-Lib {
+    param (
+        [parameter(Mandatory = $true)][string]$URL,
+        [parameter(Mandatory = $false)][string]$Name
+    )
 
-# Download WolvenKit
-Invoke-WebRequest https://github.com/WolvenKit/WolvenKit/releases/download/8.12.0/WolvenKit.Console-8.12.0.zip -o WolvenKit.zip
-mkdir WolvenKit
-Set-Location WolvenKit
-tar -xf ..\WolvenKit.zip
-Set-Location ..
-Remove-Item WolvenKit.zip
+    $FileName = ([uri]$URL).Segments[-1]
+    $FolderName = (Split-Path -Path $FileName -LeafBase)
 
-# Download ww2ogg
-Invoke-WebRequest https://github.com/hcs64/ww2ogg/releases/download/0.24/ww2ogg024.zip -o ww2ogg.zip
-mkdir ww2ogg
-Set-Location ww2ogg
-tar -xf ..\ww2ogg.zip
-Set-Location ..
-Remove-Item ww2ogg.zip
+    if ($PSBoundParameters.ContainsKey("Name")) {
+        $FolderName = $Name
+    }
 
-# Return to previous folder
-Set-Location ..
+    $TargetPath = (Join-Path -Path ".\libs" -ChildPath $FolderName)
 
-# Create a virtual environment and activate it
-py -m venv .venv
-.\.venv\Scripts\activate
+    if (Test-Path -Path $TargetPath -PathType Container) {
+        Write-Information -MessageData "Cleaning up $TargetPath and reinstalling" -InformationAction Continue
 
-# Install the project
+        Remove-Item -Path $TargetPath -Recurse
+    }
+
+    Write-Information -MessageData "Installing $FileName to $TargetPath" -InformationAction Continue
+
+    Invoke-WebRequest -Uri $URL -OutFile $FileName
+    Expand-Archive -Path $FileName -DestinationPath $TargetPath
+    Remove-Item -Path $FileName
+}
+
+if ($SkipLibs) {
+    Write-Information -MessageData "Skip Libs" -InformationAction Continue
+}
+else {
+    Write-Information -MessageData "Download and extract Libs" -InformationAction Continue
+    
+    foreach ($hash in $libs.GetEnumerator()) {
+        Get-Lib -URL $hash.Value -Name $hash.Name
+    }
+}
+
+
+Write-Information -MessageData "Create python virtual environment and activate" -InformationAction Continue
+
+python -m venv .venv
+
+.\.venv\Scripts\Activate
+
+Write-Information -MessageData "Install python dependencies" -InformationAction Continue
+
 pip install .
 
-Write-Host "Done!"
+Write-Information -MessageData "Done" -InformationAction Continue
+
