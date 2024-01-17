@@ -412,6 +412,12 @@ wwise_import.add_argument(
     default=config.WWISE_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
+wwise_import.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite files in ouzput dir",
+)
 
 # Move Wwise files
 move_wwise_files = subcommands.add_parser(

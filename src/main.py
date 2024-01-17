@@ -193,7 +193,7 @@ async def merge_vocals(args: Namespace):
 
 async def wwise_import(args: Namespace):
     """Import all found audio files to Wwise and runs conversion."""
-    await wwise.convert_files(args.input, args.project, args.output)
+    await wwise.convert_files(args.input, args.project, args.output, args.overwrite)
 
 
 async def move_wwise_files(args: Namespace):

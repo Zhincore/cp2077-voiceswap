@@ -188,7 +188,9 @@ def move_wwise_files_auto(project_dir: str, output_path: str):
         os.rename(os.path.join(cache_dir, file), new_path)
 
 
-async def _convert_files(input_path: str, project_dir: str, output_path: str, waapi):
+async def _convert_files(
+    input_path: str, project_dir: str, output_path: str, override: bool, waapi
+):
     # Wait for load
     await wait_waapi_load(waapi)
 
@@ -200,25 +202,36 @@ async def _convert_files(input_path: str, project_dir: str, output_path: str, wa
     # List all files
     tqdm.write("Starting import...")
     to_import = []
+    skipped = 0
 
     for root, _dirs, files in os.walk(input_path):
-        path = "\\".join(
-            "<Folder>" + s for s in re.split(r"[\\/]", root[len(input_path) :]) if s
-        )
+        relative_root = root[len(input_path) + 1 :]
+        path = "\\".join("<Folder>" + s for s in re.split(r"[\\/]", relative_root) if s)
 
         for file in files:
-            if file.endswith(".wav"):
-                to_import.append(
-                    {
-                        "audioFile": os.path.join(os.getcwd(), root, file),
-                        "originalsSubFolder": root[len(input_path) :],
-                        "objectPath": os.path.join(
-                            WWISE_OBJECT_PATH, path, "<Sound>" + file
-                        ),
-                    }
-                )
+            if not file.endswith(".wav"):
+                continue
+
+            file_path = os.path.join(relative_root, file)
+            if not override and os.path.exists(
+                os.path.join(output_path, re.sub(r"\.wav$", ".wem", file_path))
+            ):
+                skipped += 1
+                continue
+
+            to_import.append(
+                {
+                    "audioFile": os.path.abspath(os.path.join(input_path, file_path)),
+                    "originalsSubFolder": relative_root,
+                    "objectPath": os.path.join(
+                        WWISE_OBJECT_PATH, path, "<Sound>" + file
+                    ),
+                }
+            )
 
     # Listen for imports
+    if skipped > 0:
+        tqdm.write(f"Not overwriting {skipped} already processed files")
     pbar = tqdm(total=len(to_import), desc="Importing files to Wwise", unit="file")
 
     def on_object_created(*_args, **kwargs):
@@ -313,7 +326,9 @@ async def _convert_files(input_path: str, project_dir: str, output_path: str, wa
     tqdm.write("Conversion done!")
 
 
-async def convert_files(input_path: str, project_dir: str, output_path: str):
+async def convert_files(
+    input_path: str, project_dir: str, output_path: str, override: bool
+):
     """Converts all files in the given folder to Wwise format."""
     await create_project(project_dir)
 
@@ -334,7 +349,7 @@ async def convert_files(input_path: str, project_dir: str, output_path: str):
 
     # Run the script
     try:
-        await _convert_files(input_path, project_dir, output_path, waapi)
+        await _convert_files(input_path, project_dir, output_path, override, waapi)
     finally:
         # Close the WAAPI server
         if server.returncode is None:
