@@ -95,7 +95,7 @@ async def uvr(
         path_dir = os.path.dirname(path)
 
         if not overwrite:
-            basename = os.path.basename(path)
+            basename = os.path.basename(path).split(".")[0]
             for file in dontoverwrite[os.path.join(output_vocals_path, path_dir)]:
                 if file.startswith(basename):
                     return
@@ -127,7 +127,7 @@ async def uvr(
     shutil.rmtree(config.TMP_PATH)
 
 
-async def batch_rvc(input_path: str, opt_path: str, **kwargs):
+async def batch_rvc(input_path: str, opt_path: str, overwrite: bool, **kwargs):
     """Run RVC over given folder."""
 
     cwd = os.getcwd()
@@ -145,6 +145,7 @@ async def batch_rvc(input_path: str, opt_path: str, **kwargs):
         os.path.join(cwd, "libs/infer_batch_rvc.py"),
         *("--input_path", _input_path),
         *("--opt_path", _opt_path),
+        "--overwrite" if overwrite else "--no-overwrite",
         *chain(*(("--" + k, str(v)) for k, v in kwargs.items() if v is not None)),
         cwd=os.getenv("RVC_PATH"),
     )

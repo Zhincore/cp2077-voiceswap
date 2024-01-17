@@ -318,6 +318,12 @@ revoice.add_argument(
     default=0.25,
     help="protect soundless vowels or something, 0.5 = disabled",
 )
+revoice.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
+)
 
 # Revoice SFX
 revoice_sfx = subcommands.add_parser(
