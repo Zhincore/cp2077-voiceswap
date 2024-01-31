@@ -7,5 +7,6 @@ libs/*
 !.env.example
 __pycache__
 *.zip
+*.archive
 .cache*
 .*

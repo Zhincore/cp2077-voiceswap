@@ -1,8 +1,8 @@
 <#
     .SYNOPSIS
-        Installs directly required Librarys and runs Project Setup for CP2077-VOICESWAP
+        Installs required libraries and sets up VoiceSwap
     .EXAMPLE
-        .\install.ps1 -SkipLibs
+        .\install.ps1
 #>
 [CmdletBinding()]
 param (
@@ -14,7 +14,7 @@ param (
 $libs = @{
     "CpBnkReader" = "https://github.com/Zhincore/CpBnkReader/releases/download/v1.4/CpBnkReader.zip"
     "OpusToolZ"   = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
-    "WolvenKit"   = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.0/WolvenKit.Console-8.12.0.zip"
+    "WolvenKit"   = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.1/WolvenKit.Console-8.12.1.zip"
     "ww2ogg"      = "https://github.com/hcs64/ww2ogg/releases/download/0.24/ww2ogg024.zip"
 }
 
