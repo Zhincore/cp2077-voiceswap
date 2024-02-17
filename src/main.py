@@ -127,10 +127,10 @@ async def export_subtitle_map(args: Namespace):
     vo_map = tts.map_subtitles(
         args.subtitles_path, args.locale, args.pattern, args.gender
     )
-    output = args.output or os.path.join(config.SFX_CACHE_PATH, "subtitles.json")
+    output = args.output or os.path.join(config.METADATA_PATH, "subtitles.json")
 
-    with open(output, mode="wb") as f:
-        json.dump(vo_map, f)
+    with open(output, mode="w", encoding="utf-8") as f:
+        json.dump(vo_map, f, indent=4, ensure_ascii=False)
         tqdm.write(f"Wrote {output}!")
 
 
@@ -145,7 +145,7 @@ async def do_tts(args: Namespace):
 
     files = []
     done = []
-    for file, text in tqdm(vo_map.values(), desc="Preparing data", unit="file"):
+    for file, text in tqdm(vo_map.items(), desc="Preparing data", unit="file"):
         orig_file = file.replace("\\", os.path.sep)
         file_path = os.path.join(args.output, orig_file.replace(".wem", ".wav"))
 

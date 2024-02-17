@@ -10,10 +10,10 @@ from util import find_files
 GENDERS = ["male", "female"]
 
 
-def map_subtitles(path: str, locale: str, pattern: str, gender: str):
+def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "female"):
     """Map subtitles to their audio file that matches the pattern."""
 
-    regex = re.compile("\\\\" + pattern)
+    regex = re.compile("\\\\" + pattern) if pattern else None
     other_gender = GENDERS[(GENDERS.index(gender) + 1) % len(GENDERS)]
 
     map_paths = [*find_files(path, subfolder="en-us")]
@@ -47,9 +47,10 @@ def map_subtitles(path: str, locale: str, pattern: str, gender: str):
             for entry in entries:
                 for res_path in ("femaleResPath", "maleResPath"):
                     dep_path = entry[res_path]["DepotPath"]["$value"]
-                    if regex.search(dep_path):
+                    if not regex or regex.search(dep_path):
                         wanted_ids[entry["stringId"]] = dep_path
                         break
+
     vo_map = {}
     for file in tqdm(
         sub_paths,
@@ -69,7 +70,12 @@ def map_subtitles(path: str, locale: str, pattern: str, gender: str):
                 text = entry[gender + "Variant"] or entry[other_gender + "Variant"]
 
                 if text != "" and entry["stringId"] in wanted_ids:
-                    vo_map[entry["stringId"]] = (wanted_ids[entry["stringId"]], text)
+                    voiceover = wanted_ids[entry["stringId"]]
+
+                    if voiceover in vo_map:
+                        tqdm.write("Warning: overwriting subtitles for " + voiceover)
+
+                    vo_map[voiceover] = text
 
                     del wanted_ids[entry["stringId"]]
 
