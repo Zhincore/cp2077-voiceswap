@@ -165,6 +165,41 @@ isolate_vocals.add_argument(
     help="Whether to overwrite old files",
 )
 
+# map_subtitles
+map_subtitles = subcommands.add_parser("map_subtitles", help="Converts subtitles to speech.")
+map_subtitles.add_argument(
+    "gender",
+    type=lambda a: {"f": "female", "m": "male"}.get(a, a),
+    choices=["male", "female", "f", "m"],
+    help="Which gender of V to process (male or female).",
+)
+map_subtitles.add_argument(
+    "locale",
+    type=str,
+    help="What locale of subtitles to use.",
+    default="en-us",
+)
+map_subtitles.add_argument(
+    "output",
+    type=str,
+    help="Path to file where the subtitle map will be put.",
+)
+map_subtitles.add_argument(
+    "--pattern",
+    type=str,
+    help="The file name regex pattern to match against.",
+    default="v_(?!posessed).*_f_.*",
+    nargs=argparse.OPTIONAL,
+)
+map_subtitles.add_argument(
+    "--subtitles-path",
+    type=str,
+    help="Path where subtitle files were extracted.",
+    default=config.METADATA_EXTRACT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
+
 # TTS
 tts = subcommands.add_parser("tts", help="Converts subtitles to speech.")
 tts.add_argument(

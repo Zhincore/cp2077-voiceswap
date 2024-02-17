@@ -2,11 +2,13 @@ import asyncio
 import os
 import shutil
 import sys
+import json
 from argparse import Namespace
 
 from dotenv import load_dotenv
 from tqdm import tqdm
 
+import config
 import util
 from args import main as parser
 from lib import (
@@ -118,6 +120,18 @@ async def export_wem(args: Namespace):
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
     await rvc.uvr(args.input, args.output_vocals, args.output_rest, args.overwrite)
+
+
+async def export_subtitle_map(args: Namespace):
+    """Exports voiceover map"""
+    vo_map = tts.map_subtitles(
+        args.subtitles_path, args.locale, args.pattern, args.gender
+    )
+    output = args.output or os.path.join(config.SFX_CACHE_PATH, "subtitles.json")
+
+    with open(output, mode="wb") as f:
+        json.dump(vo_map, f)
+        tqdm.write(f"Wrote {output}!")
 
 
 async def do_tts(args: Namespace):
@@ -235,6 +249,7 @@ async def _main():
         "extract": extract_files,
         "export_wem": export_wem,
         "isolate_vocals": isolate_vocals,
+        "map_subtitles": export_subtitle_map,
         "tts": do_tts,
         "revoice": revoice,
         "revoice_sfx": revoice_sfx,
