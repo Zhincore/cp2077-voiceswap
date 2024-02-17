@@ -127,6 +127,9 @@ async def export_subtitle_map(args: Namespace):
     vo_map = tts.map_subtitles(
         args.subtitles_path, args.locale, args.pattern, args.gender
     )
+    # sort
+    vo_map = dict(sorted(vo_map.items()))
+
     output = args.output or os.path.join(config.METADATA_PATH, "subtitles.json")
 
     with open(output, mode="w", encoding="utf-8") as f:
@@ -143,6 +146,7 @@ async def do_tts(args: Namespace):
 
     is_ref_dir = os.path.isdir(args.reference)
 
+    # FIXME: vo_map structure has changed!!
     files = []
     done = []
     for file, text in tqdm(vo_map.items(), desc="Preparing data", unit="file"):

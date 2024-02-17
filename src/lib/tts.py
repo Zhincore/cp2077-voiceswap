@@ -48,8 +48,9 @@ def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "fe
                 for res_path in ("femaleResPath", "maleResPath"):
                     dep_path = entry[res_path]["DepotPath"]["$value"]
                     if not regex or regex.search(dep_path):
-                        wanted_ids[entry["stringId"]] = dep_path
-                        break
+                        if entry["stringId"] not in wanted_ids:
+                            wanted_ids[entry["stringId"]] = set()
+                        wanted_ids[entry["stringId"]].add(dep_path)
 
     vo_map = {}
     for file in tqdm(
@@ -70,17 +71,11 @@ def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "fe
                 text = entry[gender + "Variant"] or entry[other_gender + "Variant"]
 
                 if text != "" and entry["stringId"] in wanted_ids:
-                    voiceover = wanted_ids[entry["stringId"]]
+                    voiceovers = wanted_ids[entry["stringId"]]
 
-                    if voiceover in vo_map:
-                        tqdm.write("Warning: overwriting subtitles for " + voiceover)
+                    for voiceover in voiceovers:
+                        vo_map[voiceover] = text
 
-                    vo_map[voiceover] = text
-
-                    del wanted_ids[entry["stringId"]]
-
-    if len(wanted_ids) > 0:
-        tqdm.write(f"Warning: {len(wanted_ids)} of wanted subtitles were not found.")
     tqdm.write(f"Found {len(vo_map)} subtitle entries.")
 
     return vo_map
