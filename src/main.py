@@ -206,6 +206,7 @@ async def merge_vocals(args: Namespace):
         args.output_path,
         args.voice_vol,
         args.effect_vol,
+        args.filter_complex,
     )
 
 

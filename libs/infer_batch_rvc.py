@@ -71,7 +71,7 @@ def get_f0(
     f0 *= pow(2, f0_up_key / 12)
 
     # contrast change
-    avg = np.average(f0)
+    avg = np.mean(f0)
     f0 -= avg
     f0 *= f0_contrast
     f0 += avg

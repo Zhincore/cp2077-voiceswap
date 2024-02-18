@@ -426,6 +426,12 @@ merge_vocals.add_argument(
     help="Adjust the volume of the effects. 1 is original volume.",
     default=1,
 )
+merge_vocals.add_argument(
+    "filter_complex",
+    type=str,
+    help="Additional filter to pass to ffmpeg.",
+    default="anull",
+)
 
 # wwise convert
 wwise_import = subcommands.add_parser(

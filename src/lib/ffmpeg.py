@@ -58,6 +58,7 @@ async def merge_vocals(
     output_path: str,
     voice_vol: float = 1.5,
     effect_vol: float = 1,
+    filter_complex: str = "anull",
 ):
     """Merges vocals with effects."""
     parallel = Parallel("Merging vocals")
@@ -73,7 +74,7 @@ async def merge_vocals(
             *("-i", os.path.join(vocals_path, path, name)),
             *("-i", os.path.join(others_path, path, other_name)),
             "-filter_complex",
-            f"[0]volume={voice_vol}[a];[1]volume={effect_vol}[b];[a][b]amix=inputs=2:duration=longest",
+            f"[0]volume={voice_vol}[a];[1]volume={effect_vol}[b];[a][b]amix=inputs=2:duration=longest,{filter_complex}",
             output,
             "-y",
         )
