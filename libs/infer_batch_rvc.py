@@ -185,7 +185,7 @@ def pipeline(
         )
         pitch = pitch[:p_len]
         pitchf = pitchf[:p_len]
-        if "mps" not in str(self.device) or "xpu" not in str(self.device):
+        if self.device == "mps":
             pitchf = pitchf.astype(np.float32)
         pitch = torch.tensor(pitch, device=self.device).unsqueeze(0).long()
         pitchf = torch.tensor(pitchf, device=self.device).unsqueeze(0).float()
@@ -265,7 +265,7 @@ def pipeline(
     audio_opt = np.concatenate(audio_opt)
     if rms_mix_rate != 1:
         audio_opt = change_rms(audio, 16000, audio_opt, tgt_sr, rms_mix_rate)
-    if tgt_sr != resample_sr >= 16000:
+    if resample_sr >= 16000 and tgt_sr != resample_sr:
         audio_opt = librosa.resample(audio_opt, orig_sr=tgt_sr, target_sr=resample_sr)
     audio_max = np.abs(audio_opt).max() / 0.99
     max_int16 = 32768
