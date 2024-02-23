@@ -59,7 +59,11 @@ async def sfx_metadata(args: Namespace):
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata."""
     await sfx_mapping.build_sfx_event_index(
-        args.metadata_path, args.output, args.keep_empty
+        args.metadata_path,
+        args.output,
+        args.keep_empty,
+        args.sound_list_format,
+        args.minify,
     )
 
 
@@ -145,7 +149,6 @@ async def do_tts(args: Namespace):
 
     is_ref_dir = os.path.isdir(args.reference)
 
-    # FIXME: vo_map structure has changed!!
     files = []
     done = []
     for file, text in tqdm(vo_map.items(), desc="Preparing data", unit="file"):

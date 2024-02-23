@@ -43,7 +43,13 @@ def select_sfx(map_path: str, gender: str):
     return files
 
 
-async def build_sfx_event_index(metadata_path: str, output_path: str, keep_empty=True):
+async def build_sfx_event_index(
+    metadata_path: str,
+    output_path: str,
+    keep_empty=True,
+    sound_list_format=False,
+    minified=False,
+):
     """Maps event names to audio source ids"""
 
     bnk_entries = {}
@@ -93,11 +99,13 @@ async def build_sfx_event_index(metadata_path: str, output_path: str, keep_empty
     index = {}
 
     try:
-        await _create_index(event_list, bnk_entries, opusinfo, index, keep_empty)
+        index = await _create_index(
+            event_list, bnk_entries, opusinfo, keep_empty, sound_list_format
+        )
     finally:
         tqdm.write("Writing sfx index...")
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(index, f, indent=4)
+            json.dump(index, f, indent=None if minified else 4)
 
 
 def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
@@ -107,9 +115,13 @@ def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
 
 
 async def _create_index(
-    event_list, bnk_entries, opusinfo, index: dict = None, keep_empty=True
+    event_list,
+    bnk_entries,
+    opusinfo,
+    keep_empty=True,
+    sound_list_format=False,
 ):
-    index = index if index is not None else {}
+    index = {}
 
     tqdm.write("Spawning subprocesses...")
 
@@ -129,6 +141,50 @@ async def _create_index(
             pbar.update(1)
 
         await asyncio.gather(*(do_task(event) for event in event_list))
+
+    # Convert the index into a list of sounds instead of events
+    if sound_list_format:
+        sounds = {}
+
+        for event_name, event in tqdm(
+            index.items(), desc="Converting to sound list format", unit="event"
+        ):
+            for sound in event["sounds"]:
+                sound_id = sound["hash"]
+                indexed_sound = sounds[sound_id] if sound_id in sounds else None
+
+                # Create sound if not found already
+                if indexed_sound is None:
+                    sounds[sound_id] = {**sound, "events": [], "tags": []}
+                    indexed_sound = sounds[sound_id]
+
+                # various vibe checks
+                old_pak = indexed_sound["pak"] if "pak" in indexed_sound else None
+                new_pak = sound["pak"] if "pak" in sound else None
+                old_index = (
+                    indexed_sound["indexInPak"]
+                    if "indexInPak" in indexed_sound
+                    else None
+                )
+                new_index = sound["indexInPak"] if "indexInPak" in sound else None
+
+                if old_pak != new_pak:
+                    tqdm.write(
+                        f"WARNING: Sound {sound_id} is both in {old_pak} and {new_pak}!"
+                    )
+                elif old_index != new_index:
+                    tqdm.write(f"WARNING! Sound {sound_id} has different pak indices!")
+
+                # Add new event name in a sorted way
+                indexed_sound["events"] = list(
+                    sorted(chain(indexed_sound["events"], [event_name]))
+                )
+                # Add new unique tags
+                indexed_sound["tags"].extend(
+                    [tag for tag in event["tags"] if tag not in indexed_sound["tags"]]
+                )
+
+        index = sounds
 
     # Sort the index
     return dict(sorted(index.items()))
