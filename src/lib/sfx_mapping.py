@@ -105,7 +105,12 @@ async def build_sfx_event_index(
     finally:
         tqdm.write("Writing sfx index...")
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(index, f, indent=None if minified else 4)
+            json.dump(
+                index,
+                f,
+                indent=None if minified else 4,
+                separators=(",", ":") if minified else None,
+            )
 
 
 def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
