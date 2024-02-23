@@ -59,8 +59,7 @@ async def sfx_metadata(args: Namespace):
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata."""
     await sfx_mapping.build_sfx_event_index(
-        args.metadata_path,
-        args.output,
+        args.metadata_path, args.output, args.keep_empty
     )
 
 

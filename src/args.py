@@ -42,6 +42,12 @@ map_sfx.add_argument(
     default=config.SFX_MAP_PATH,
     nargs=argparse.OPTIONAL,
 )
+map_sfx.add_argument(
+    "--keep-empty",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to keep empty events in the map (yes by default).",
+)
 
 # Extract subtitles
 extract_subtitles = subcommands.add_parser(

@@ -43,7 +43,7 @@ def select_sfx(map_path: str, gender: str):
     return files
 
 
-async def build_sfx_event_index(metadata_path: str, output_path: str):
+async def build_sfx_event_index(metadata_path: str, output_path: str, keep_empty=True):
     """Maps event names to audio source ids"""
 
     bnk_entries = {}
@@ -93,7 +93,7 @@ async def build_sfx_event_index(metadata_path: str, output_path: str):
     index = {}
 
     try:
-        await _create_index(event_list, bnk_entries, opusinfo, index)
+        await _create_index(event_list, bnk_entries, opusinfo, index, keep_empty)
     finally:
         tqdm.write("Writing sfx index...")
         with open(output_path, "w", encoding="utf-8") as f:
@@ -106,7 +106,9 @@ def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
     __g_opusinfo = shared_opusinfo
 
 
-async def _create_index(event_list, bnk_entries, opusinfo, index: dict = None):
+async def _create_index(
+    event_list, bnk_entries, opusinfo, index: dict = None, keep_empty=True
+):
     index = index if index is not None else {}
 
     tqdm.write("Spawning subprocesses...")
@@ -119,10 +121,11 @@ async def _create_index(event_list, bnk_entries, opusinfo, index: dict = None):
 
         async def do_task(event):
             sounds = await loop.run_in_executor(pool, _find_sounds, event["wwiseId"])
-            index[event["redId"]["$value"]] = {
-                "sounds": sounds,
-                "tags": [tag["$value"] for tag in event["tags"]],
-            }
+            if keep_empty or len(sounds) > 0:
+                index[event["redId"]["$value"]] = {
+                    "sounds": sounds,
+                    "tags": [tag["$value"] for tag in event["tags"]],
+                }
             pbar.update(1)
 
         await asyncio.gather(*(do_task(event) for event in event_list))
@@ -143,7 +146,15 @@ def _find_sounds(entry_id, switches: list = None, stack: set = None):
     for entry in entries:
         sounds.extend(_find_sounds_in_entry(entry, switches, stack))
 
-    return sounds
+    # Deduplicate
+    seen_hashes = set()
+    deduplicated = []
+    for sound in sounds:
+        if sound["hash"] not in seen_hashes:
+            seen_hashes.add(sound["hash"])
+            deduplicated.append(sound)
+
+    return deduplicated
 
 
 def _find_sounds_in_entry(entry, gender: str = None, stack: set = None):
