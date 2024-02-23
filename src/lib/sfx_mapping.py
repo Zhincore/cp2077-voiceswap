@@ -226,16 +226,7 @@ def _find_sounds_in_entry(entry, gender: str = None, stack: set = None):
         return [_find_sound_in_opusinfo(entry["SourceId"], gender)]
     elif entry["EntryType"] == "MusicTrack":
         return [
-            _sound_entry(
-                source,
-                False,
-                True,
-                gender,
-                {
-                    "filename": str(source) + ".wem",
-                },
-            )
-            for source in entry["Sources"]
+            _sound_entry(source, False, True, gender) for source in entry["Sources"]
         ]
     elif entry["EntryType"] == "SwitchCntr":
         sounds = []

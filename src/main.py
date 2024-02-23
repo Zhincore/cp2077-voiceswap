@@ -1,8 +1,8 @@
 import asyncio
+import json
 import os
 import shutil
 import sys
-import json
 from argparse import Namespace
 
 from dotenv import load_dotenv
@@ -81,6 +81,75 @@ async def extract_subtitles(args: Namespace):
     )
 
 
+async def extract_all_sfx(args: Namespace):
+    """Extract all SFX including music from the game."""
+
+    tqdm.write("Loading SFX map...")
+    sfx_map = {}
+    with open(args.map_path, "r", encoding="utf-8") as f:
+        sfx_map = json.load(f)
+
+    pak_hashes = set()
+    other_hashes = set()
+
+    for event in tqdm(sfx_map.values(), desc="Preparing extraction", unit="event"):
+        for sound in event["sounds"]:
+            if sound["inPak"]:
+                pak_hashes.add(str(sound["hash"]))
+            else:
+                other_hashes.add(str(sound["hash"]))
+
+    # Run SFX in background
+    sfx_task = asyncio.create_task(
+        _extract_sfx(list(pak_hashes), args.sfx_cache_path, args.output)
+    )
+
+    await wolvenkit.extract_files(
+        "base\\\\sound\\\\soundbanks\\\\.*\\.wem",
+        args.sfx_cache_path,
+    )
+
+    not_found = 0
+    for sound in tqdm(other_hashes, desc="Converting wem SFX"):
+        input_path = os.path.join(
+            args.sfx_cache_path, f"base\\sound\\soundbanks\\{sound}.wem"
+        )
+        output_path = os.path.join(args.output, f"{sound}.ogg")
+        if os.path.exists(input_path):
+            try:
+                await ww2ogg.ww2ogg(input_path, output_path)
+            except util.SubprocessException:
+                tqdm.write(f"Converting {sound} failed, continuing...")
+                not_found += 1
+        else:
+            tqdm.write(f"Sound {sound} not found.")
+            not_found += 1
+
+    tqdm.write(f"Finished extracting wem SFX, {not_found} were not found or failed.")
+
+    tqdm.write("Waiting for opus pak extraction to finish...")
+    await sfx_task
+
+    tqdm.write("Done.")
+
+
+async def _extract_sfx(hashes: list, cache_path: str, output: str, paks: list = None):
+    tqdm.write("Extracting SFX containers from the game...")
+    await wolvenkit.extract_files(
+        "sfx_container(_("
+        + ("|".join(paks) if paks else ".*")
+        + ")\\.opuspak|\\.opusinfo)",
+        cache_path,
+    )
+
+    tqdm.write("Extracting SFX audio files from the containers...")
+    await opustoolz.extract_sfx(
+        os.path.join(cache_path, "base/sound/soundbanks/sfx_container.opusinfo"),
+        hashes,
+        output,
+    )
+
+
 async def extract_sfx(args: Namespace):
     """Extract wanted SFX from the game."""
 
@@ -90,21 +159,8 @@ async def extract_sfx(args: Namespace):
     paks = set(file["pak"][len("sfx_container_") : -len(".opuspak")] for file in files)
     tqdm.write(f"Found {len(hashes)} matching SFX files in {len(paks)} paks.")
 
-    tqdm.write("Extracting SFX containers from the game...")
-
-    await wolvenkit.extract_files(
-        "sfx_container(_(" + "|".join(paks) + ")\\.opuspak|\\.opusinfo)",
-        args.sfx_cache_path,
-    )
-
-    tqdm.write("Extracting SFX audio files from the containers...")
-
-    await opustoolz.extract_sfx(
-        os.path.join(
-            args.sfx_cache_path, "base/sound/soundbanks/sfx_container.opusinfo"
-        ),
-        hashes,
-        os.path.join(args.output, args.gender),
+    await _extract_sfx(
+        hashes, args.sfx_cache_path, os.path.join(args.output, args.gender), paks
     )
 
 
@@ -252,6 +308,7 @@ async def _main():
         "sfx_metadata": sfx_metadata,
         "map_sfx": map_sfx,
         "extract_subtitles": extract_subtitles,
+        "extract_all_sfx": extract_all_sfx,
         "extract_sfx": extract_sfx,
         "extract": extract_files,
         "export_wem": export_wem,

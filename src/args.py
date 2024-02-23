@@ -80,6 +80,34 @@ extract_subtitles.add_argument(
     nargs=argparse.OPTIONAL,
 )
 
+
+# Extract all SFX
+extract_all_sfx = subcommands.add_parser(
+    "extract_all_sfx",
+    help="Extract all SFX including music.",
+)
+extract_all_sfx.add_argument(
+    "output",
+    type=str,
+    help="Where to put the SFX audio files.",
+    default=config.SFX_EXPORT_PATH,
+    nargs=argparse.OPTIONAL,
+)
+extract_all_sfx.add_argument(
+    "--map-path",
+    type=str,
+    help="Path to sfx_map.json file.",
+    default=config.SFX_MAP_PATH,
+    nargs=argparse.OPTIONAL,
+)
+extract_all_sfx.add_argument(
+    "--sfx-cache-path",
+    type=str,
+    help="Path where to store SFX containers.",
+    default=config.SFX_CACHE_PATH,
+    nargs=argparse.OPTIONAL,
+)
+
 # Select SFX files
 extract_sfx = subcommands.add_parser(
     "extract_sfx",
