@@ -3,6 +3,7 @@ import concurrent.futures
 import json
 import os
 from itertools import chain
+from multiprocessing import Manager
 
 from tqdm import tqdm
 
@@ -44,6 +45,7 @@ def select_sfx(map_path: str, gender: str):
 
 
 async def build_sfx_event_index(
+    banks: dict,
     metadata_path: str,
     output_path: str,
     keep_empty=True,
@@ -51,26 +53,7 @@ async def build_sfx_event_index(
     minified=False,
 ):
     """Maps event names to audio source ids"""
-
-    bnk_entries = {}
-
     extracted_path = os.path.join(metadata_path, "extracted")
-    for file in tqdm(
-        list(find_files(extracted_path, ".json")), desc="Loading bnk files", unit="file"
-    ):
-        if file == "sfx_container.opusinfo.json":
-            continue
-
-        with open(os.path.join(extracted_path, file), "r", encoding="utf-8") as f:
-            bnk = json.load(f)
-
-            for entry in chain(
-                *(s["Entries"] for s in bnk["Sections"] if s["Type"] == "HIRC")
-            ):
-                if entry["Id"] not in bnk_entries:
-                    bnk_entries[entry["Id"]] = []
-
-                bnk_entries[entry["Id"]].append(entry)
 
     tqdm.write("Loading opusinfo...")
 
@@ -100,7 +83,7 @@ async def build_sfx_event_index(
 
     try:
         index = await _create_index(
-            event_list, bnk_entries, opusinfo, keep_empty, sound_list_format
+            event_list, banks, opusinfo, keep_empty, sound_list_format
         )
     finally:
         tqdm.write("Writing sfx index...")
@@ -128,24 +111,29 @@ async def _create_index(
 ):
     index = {}
 
-    tqdm.write("Spawning subprocesses...")
+    tqdm.write("Preparing workers...")
 
     loop = asyncio.get_running_loop()
-    with concurrent.futures.ProcessPoolExecutor(
-        initializer=_load_data, initargs=(bnk_entries, opusinfo)
-    ) as pool:
-        pbar = tqdm(total=len(event_list), desc="Scanning events", unit="event")
+    with Manager() as manager:
+        shared_bnk_entries = manager.dict(bnk_entries)
+        shared_opusinfo = manager.dict(opusinfo)
+        with concurrent.futures.ProcessPoolExecutor(
+            initializer=_load_data, initargs=(shared_bnk_entries, shared_opusinfo)
+        ) as pool:
+            pbar = tqdm(total=len(event_list), desc="Scanning events", unit="event")
 
-        async def do_task(event):
-            sounds = await loop.run_in_executor(pool, _find_sounds, event["wwiseId"])
-            if keep_empty or len(sounds) > 0:
-                index[event["redId"]["$value"]] = {
-                    "sounds": sounds,
-                    "tags": [tag["$value"] for tag in event["tags"]],
-                }
-            pbar.update(1)
+            async def do_task(event):
+                sounds = await loop.run_in_executor(
+                    pool, _find_sounds, event["wwiseId"]
+                )
+                if keep_empty or len(sounds) > 0:
+                    index[event["redId"]["$value"]] = {
+                        "sounds": sounds,
+                        "tags": [tag["$value"] for tag in event["tags"]],
+                    }
+                pbar.update(1)
 
-        await asyncio.gather(*(do_task(event) for event in event_list))
+            await asyncio.gather(*(do_task(event) for event in event_list))
 
     # Convert the index into a list of sounds instead of events
     if sound_list_format:
@@ -220,48 +208,24 @@ def _find_sounds(entry_id, switches: list = None, stack: set = None):
 
 def _find_sounds_in_entry(entry, gender: str = None, stack: set = None):
     stack = stack if stack is not None else set()
-    stack.add(entry["Id"])
+    stack.add(entry.ulID)
 
-    if entry["EntryType"] == "Sound":
-        return [_find_sound_in_opusinfo(entry["SourceId"], gender)]
-    elif entry["EntryType"] == "MusicTrack":
-        return [
-            _sound_entry(source, False, True, gender) for source in entry["Sources"]
-        ]
-    elif entry["EntryType"] == "SwitchCntr":
-        sounds = []
+    # Our goal
+    if entry.name in ("CAkSound", "CAkMusicTrack"):
+        return [*(_find_sound_in_opusinfo(child, gender) for child in entry.children)]
 
-        for group in entry["Groups"]:
-            _gender = {
+    # Gender detection
+    if "ulSwitchID" in entry.data:
+        for switch_id in entry.data["ulSwitchID"]:
+            gender = {
                 3111576190: "male",
                 2204441813: "female",
-            }.get(group["SwitchId"], gender)
+            }.get(switch_id, gender)
 
-            sounds.extend(_find_sounds_children(group["Items"], _gender, stack))
-        return sounds
-
-    children = {
-        "RanSeqCntr": lambda entry: entry["Children"],
-        "LayerCntr": lambda entry: entry["Children"],
-        "MusicRanSeqCntr": lambda entry: entry["Children"],
-        "MusicSwitchCntr": lambda entry: entry["Children"],
-        "MusicSegment": lambda entry: entry["Children"],
-        "Action": lambda entry: [entry["GameObjectReferenceId"]],
-        "Event": lambda entry: entry["Events"],
-    }.get(
-        entry["EntryType"],
-        lambda entry: tqdm.write("Unexpected entry type: " + entry["EntryType"]),
-    )(
-        entry
-    )
-
-    return _find_sounds_children(children, gender, stack)
+    return _find_sounds_children(entry.children, gender, stack)
 
 
 def _find_sounds_children(children: list, gender: str, stack: set):
-    if children is None:
-        return []
-
     sounds = []
     for child in children:
         if child in stack:

@@ -10,7 +10,7 @@ authors = [
 ]
 description = ""
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies  = [
   "asyncio",
   "python-dotenv",
@@ -18,7 +18,8 @@ dependencies  = [
   "tqdm",
   "waapi-client",
   "nest-asyncio",
-  "watchdog"
+  "watchdog",
+  "colorama",
 ]
 
 [project.optional-dependencies]

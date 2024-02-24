@@ -12,7 +12,6 @@ import config
 import util
 from args import main as parser
 from lib import (
-    bnk_reader,
     ffmpeg,
     opustoolz,
     rvc,
@@ -21,6 +20,7 @@ from lib import (
     wolvenkit,
     ww2ogg,
     wwise,
+    wwiser,
 )
 
 load_dotenv(".env")
@@ -37,16 +37,7 @@ async def sfx_metadata(args: Namespace):
     await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
     pbar.update(1)
 
-    parallel = util.Parallel("Converting bnk files")
-
-    for file in util.find_files(args.output, ".bnk"):
-        parallel.run(
-            bnk_reader.convert_bnk,
-            os.path.join(args.output, file),
-            os.path.join(args.output, "extracted", file.replace(".bnk", ".json")),
-        )
-
-    await parallel.wait()
+    # TODO: WWISER
     pbar.update(1)
 
     await opustoolz.export_info(
@@ -58,7 +49,10 @@ async def sfx_metadata(args: Namespace):
 
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata."""
+    banks = await wwiser.parse_banks("banks.xml")
+
     await sfx_mapping.build_sfx_event_index(
+        banks,
         args.metadata_path,
         args.output,
         args.keep_empty,
@@ -125,7 +119,10 @@ async def extract_all_sfx(args: Namespace):
             tqdm.write(f"Sound {sound} not found.")
             not_found += 1
 
-    tqdm.write(f"Finished extracting wem SFX, {not_found} were not found or failed.")
+    total_other = len(other_hashes)
+    tqdm.write(
+        f"Finished extracting wem SFX, {not_found}/{total_other} were not found or failed."
+    )
 
     tqdm.write("Waiting for opus pak extraction to finish...")
     await sfx_task
