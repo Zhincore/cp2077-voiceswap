@@ -233,6 +233,89 @@ async def parse_banks(banks_folder: str):
     return result
 
 
+def extract_embeded_sfx(banks_folder: str, output_folder: str):
+    """Extracts SFX files that are embedded in the bnk files."""
+
+    banks = {}
+
+    last_bank = {"files": []}
+    last_file = {}
+    in_list = False
+
+    p = xml.parsers.expat.ParserCreate()
+    pbar = None
+
+    def start_element(name: str, attrs: dict):
+        nonlocal last_bank, last_file, in_list
+
+        pbar.update(p.CurrentLineNumber - pbar.n)
+
+        # Starting new bank
+        if name == "root":
+            last_bank = {"files": []}
+            banks[os.path.join(attrs["path"], attrs["filename"])] = last_bank
+            return
+
+        obj_name = attrs["name"] if "name" in attrs else None
+
+        if obj_name == "pData" and attrs["type"] == "gap":
+            last_bank["offset"] = int(attrs["offset"])
+
+        if name == "list" and obj_name == "pLoadedMedia":
+            in_list = True
+            return
+
+        if in_list:
+            match obj_name:
+                case "MediaHeader":
+                    last_bank["files"].append(last_file)
+                    last_file = {}
+                case "id" | "uOffset" | "uSize":
+                    last_file[obj_name] = int(attrs["value"])
+
+    def end_element(name: str):
+        nonlocal in_list
+        if name == "list":
+            in_list = False
+
+    tqdm.write("Reading banks.xml...")
+    with open(os.path.join(banks_folder, "banks.xml"), "r", encoding="utf-8") as f:
+        data = f.read()
+
+        pbar = tqdm(total=data.count("\n"), desc="Parsing banks.xml", unit="lines")
+
+        p.StartElementHandler = start_element
+        p.EndElementHandler = end_element
+        p.Parse("<data>" + data + "</data>")
+        pbar.close()
+
+    os.makedirs(output_folder, exist_ok=True)
+
+    extracted_files = []
+    for bnk_path, bnk in tqdm(banks.items(), desc="Scanning bnk files...", unit="file"):
+        if len(bnk["files"]) == 0:
+            continue
+
+        with open(bnk_path, "rb") as f:
+            for file in tqdm(
+                bnk["files"], desc="Extracting files...", unit="file", position=1
+            ):
+                if "id" not in file or file["uOffset"] == 0:
+                    continue
+
+                out_path = os.path.join(output_folder, str(file["id"]) + ".wem")
+
+                f.seek(bnk["offset"] + file["uOffset"])
+                with open(out_path, "wb") as out:
+                    out.write(f.read(file["uSize"]))
+
+                extracted_files.append(file["id"])
+
+    tqdm.write(f"Extracted {len(extracted_files)} embedded files.")
+
+    return extracted_files
+
+
 # def _json_default(d):
 #     match d:
 #         case set():

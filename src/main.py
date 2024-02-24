@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 from argparse import Namespace
+from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 from tqdm import tqdm
@@ -98,10 +99,21 @@ async def extract_all_sfx(args: Namespace):
         _extract_sfx(list(pak_hashes), args.sfx_cache_path, args.output)
     )
 
+    tqdm.write("Extracting embedded SFX...")
+    # Run in other thread to keep the above task running
+    embedded_task = asyncio.create_task(
+        asyncio.to_thread(
+            wwiser.extract_embeded_sfx,
+            args.metadata_path,
+            os.path.join(args.sfx_cache_path, "base\\sound\\soundbanks"),
+        )
+    )
+
     await wolvenkit.extract_files(
         "base\\\\sound\\\\soundbanks\\\\.*\\.wem",
         args.sfx_cache_path,
     )
+    other_hashes.update(await embedded_task)
 
     not_found = 0
     for sound in tqdm(other_hashes, desc="Converting wem SFX"):

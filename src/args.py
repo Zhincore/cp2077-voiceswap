@@ -107,6 +107,13 @@ extract_all_sfx.add_argument(
     default=config.SFX_CACHE_PATH,
     nargs=argparse.OPTIONAL,
 )
+extract_all_sfx.add_argument(
+    "--metadata-path",
+    type=str,
+    help="Path where SFX metadata is stored.",
+    default=config.METADATA_EXTRACT_PATH,
+    nargs=argparse.OPTIONAL,
+)
 
 # Select SFX files
 extract_sfx = subcommands.add_parser(
