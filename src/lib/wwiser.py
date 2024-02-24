@@ -1,13 +1,39 @@
 import asyncio
 import concurrent.futures
-import json
 import os
+import sys
 import time
 import xml.parsers.expat
 from multiprocessing import Queue
 from queue import Empty
 
 from tqdm import tqdm
+
+from util import SubprocessException
+
+
+async def export_banks(bnk_path: str, output: str):
+    """Exports banks in given folder to banks.xml in given output folder."""
+    tqdm.write("Exportink bnk files...")
+
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        os.path.abspath("./libs/wwiser/wwiser.pyz"),
+        *("-d", "xml"),
+        *("-r", os.path.join(os.path.abspath(bnk_path), "**\\*.bnk")),
+        cwd=os.path.abspath(output),
+        stdin=asyncio.subprocess.DEVNULL,
+    )
+
+    result = await process.wait()
+
+    if result != 0:
+        raise SubprocessException(
+            "Exporting banks failed with exit code " + str(result)
+        )
+
+    tqdm.write("Banks exported!")
+
 
 _g_queue = None
 
@@ -149,14 +175,14 @@ def _initialize_worker(queue):
     _g_queue = queue
 
 
-async def parse_banks(filename: str):
+async def parse_banks(banks_folder: str):
     """Parses banks.xml"""
 
     result = {}
     data = ""
 
     tqdm.write("Reading banks.xml...")
-    with open(filename, "r", encoding="utf-8") as f:
+    with open(os.path.join(banks_folder, "banks.xml"), "r", encoding="utf-8") as f:
         data = f.read()
 
     roots = data.split("<root")
@@ -207,16 +233,16 @@ async def parse_banks(filename: str):
     return result
 
 
-def _json_default(d):
-    match d:
-        case set():
-            return list(d)
+# def _json_default(d):
+#     match d:
+#         case set():
+#             return list(d)
 
-    if hasattr(d, "as_dict"):
-        return d.as_dict()
+#     if hasattr(d, "as_dict"):
+#         return d.as_dict()
 
-    if hasattr(d, "__dict__"):
-        return d.__dict__
+#     if hasattr(d, "__dict__"):
+#         return d.__dict__
 
-    d_type = type(d)
-    raise TypeError(f"Object of type {d_type} is not JSON serializable")
+#     d_type = type(d)
+#     raise TypeError(f"Object of type {d_type} is not JSON serializable")

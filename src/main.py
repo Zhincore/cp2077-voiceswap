@@ -37,7 +37,7 @@ async def sfx_metadata(args: Namespace):
     await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
     pbar.update(1)
 
-    # TODO: WWISER
+    await wwiser.export_banks(args.output, args.output)
     pbar.update(1)
 
     await opustoolz.export_info(
@@ -49,7 +49,7 @@ async def sfx_metadata(args: Namespace):
 
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata."""
-    banks = await wwiser.parse_banks("banks.xml")
+    banks = await wwiser.parse_banks(args.metadata_path)
 
     await sfx_mapping.build_sfx_event_index(
         banks,
