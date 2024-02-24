@@ -4,15 +4,14 @@ import json
 import os
 import time
 import xml.parsers.expat
-from multiprocessing import Queue, current_process
+from multiprocessing import Queue
 from queue import Empty
 
-from colorama import Fore
 from tqdm import tqdm
 
 _g_queue = None
 
-# How often to update progress bars
+# How often to update progress bar
 _UPDATE_DELAY = 0.005
 
 # Thank you https://www.nexusmods.com/cyberpunk2077/mods/11075
@@ -42,8 +41,8 @@ class BankObject:
     """Storage class for CAk objects"""
 
     name: str
-    ulID: str
-    children: set[str]
+    ulID: int
+    children: set[int]
     data: dict
 
     child_field: str = None
@@ -83,13 +82,14 @@ class BanksParser:
 
         return self.__objects
 
-    def __update__progress(self):
+    def update__progress(self, force=False):
+        """Call the progress function with progress"""
         if self.__progress is None:
             return
 
         # Throttle updates
         now = time.monotonic()
-        if now - self.__last_progress < _UPDATE_DELAY:
+        if not force and now - self.__last_progress < _UPDATE_DELAY:
             return
 
         self.__last_progress = now
@@ -99,7 +99,7 @@ class BanksParser:
         self.__last_line = self.__p.CurrentLineNumber
 
     def __start_element(self, node_type: str, attrs: dict):
-        self.__update__progress()
+        self.update__progress()
 
         name = attrs["name"] if "name" in attrs else None
 
@@ -111,13 +111,14 @@ class BanksParser:
                     return
 
                 if name == self.__object.child_field:
-                    self.__object.children.add(value)
+                    self.__object.children.add(int(value))
 
                 elif name == "ulID":
-                    self.__object.ulID = value
-                    if value not in self.__objects:
-                        self.__objects[value] = []
-                    self.__objects[value].append(self.__object)
+                    ul_id = int(value)
+                    self.__object.ulID = ul_id
+                    if ul_id not in self.__objects:
+                        self.__objects[ul_id] = []
+                    self.__objects[ul_id].append(self.__object)
 
                 elif name in _DATA_FILEDS:
                     if name not in self.__object.data:
@@ -129,20 +130,16 @@ class BanksParser:
                     self.__object = BankObject(name)
 
     def __end_element(self, _node_type: str):
-        self.__update__progress()
+        self.update__progress()
 
 
-def _parse_bank(root: str, index: int):
+def _parse_bank(root: str):
     global _g_queue
     p = BanksParser()
 
-    process_id = int(current_process().name.split("-")[-1])
-    total = root.count("\n")
-    _g_queue.put((process_id, index, total, None))
+    result = p.parse(root, _g_queue.put)
 
-    result = p.parse(root, lambda v: _g_queue.put((process_id, index, None, v)))
-
-    _g_queue.put((process_id, index, None, None))
+    p.update__progress(force=True)
 
     return result
 
@@ -164,7 +161,8 @@ async def parse_banks(filename: str):
 
     roots = data.split("<root")
     root_count = len(roots)
-    tqdm.write(f"Starting parsing for {root_count} chunks...\n")
+    total_lines = data.count("\n") + root_count
+    tqdm.write(f"Starting parsing of {root_count} chunks...")
 
     loop = asyncio.get_running_loop()
     max_workers = os.cpu_count()
@@ -175,61 +173,36 @@ async def parse_banks(filename: str):
         initializer=_initialize_worker,
         initargs=(progress_queue,),
     ) as pool:
-        sub_pbars = [
-            tqdm(unit="lines", position=i, leave=False) for i in range(max_workers)
-        ]
         pbar = tqdm(
-            total=root_count,
-            desc=Fore.BLUE + "Parsing banks.xml",
-            unit="chunks",
-            position=max_workers,
-            leave=False,
+            total=total_lines,
+            desc="Parsing banks.xml",
+            unit="lines",
         )
 
-        async def do_task(root: str, index: int):
-            sub_result = await loop.run_in_executor(
-                pool, _parse_bank, "<root" + root, index
-            )
+        async def do_task(root: str):
+            sub_result = await loop.run_in_executor(pool, _parse_bank, "<root" + root)
             result.update(sub_result)
-            pbar.update(1)
 
         async def watch_progress():
             while pbar.n < pbar.total:
                 try:
-                    worker, chunk, total, progress = progress_queue.get_nowait()
-                    sub_pbar = sub_pbars[worker - 1]
-                    if total is not None:
-                        # New job
-                        sub_pbar.set_description(
-                            f"{Fore.YELLOW}Worker {worker} is parsing chunk {chunk} of {root_count}"
-                        )
-                        sub_pbar.reset(total)
-                    elif progress is not None:
-                        # Job progress
-                        sub_pbar.update(progress)
-                    else:
-                        # Job finished
-                        sub_pbar.set_description(f"{Fore.GREEN}Worker {worker} is done")
-                        sub_pbar.n = sub_pbar.total
-                        sub_pbar.refresh()
+                    pbar.update(progress_queue.get_nowait())
                 except Empty:
                     await asyncio.sleep(_UPDATE_DELAY)
 
         await asyncio.gather(
             watch_progress(),
-            *(do_task(root, i) for i, root in enumerate(roots)),
+            *(do_task(root) for root in roots),
         )
 
-        for sub_pbar in sub_pbars:
-            sub_pbar.close()
         pbar.close()
 
     # the progress bars leave empty lines and last one isn't full width...
-    tqdm.write("\nParsing banks.xml finished.")
+    tqdm.write("Parsing banks.xml finished.")
 
-    tqdm.write("Saving result...")
-    with open("banks.json", "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=4, default=_json_default)
+    # tqdm.write("Saving result...")
+    # with open("banks.json", "w", encoding="utf-8") as f:
+    #     json.dump(result, f, indent=4, default=_json_default)
 
     return result
 

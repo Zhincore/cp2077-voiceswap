@@ -7,18 +7,14 @@ from multiprocessing import Manager
 
 from tqdm import tqdm
 
-from util import find_files
-
 __g_bnk_entries = {}
 __g_opusinfo = {}
 
-
-def has_all(what: list, where: list):
-    """Utility function that returns wether `where` has all items in `what`."""
-    for item in what:
-        if item not in where:
-            return False
-    return True
+# ulSwitchId mapping to gender
+_GENDERS = {
+    "3111576190": "male",
+    "2204441813": "female",
+}
 
 
 def select_sfx(map_path: str, gender: str):
@@ -63,7 +59,27 @@ async def build_sfx_event_index(
         "r",
         encoding="utf-8",
     ) as f:
-        opusinfo = json.load(f)
+        data = json.load(f)
+
+        last_pak = -1
+        index_in_pak = 0
+
+        for index, opus_hash in enumerate(data["OpusHashes"]):
+            pak_index = data["PackIndices"][index]
+
+            if last_pak != pak_index:
+                last_pak = pak_index
+                index_in_pak = 0
+
+            opusinfo[opus_hash] = {
+                "pak_index": f"sfx_container_{pak_index}.opuspak",
+                "indexInPak": index_in_pak,
+                "opusOffset": data["OpusOffsets"][index],
+                "riffOpusOffset": data["RiffOpusOffsets"][index],
+                "opusStreamLength": data["OpusStreamLengths"][index],
+                "wavStreamLength": data["WavStreamLengths"][index],
+            }
+            index_in_pak += 1
 
     tqdm.write("Loading events metadata...")
     events = {}
@@ -103,9 +119,9 @@ def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
 
 
 async def _create_index(
-    event_list,
-    bnk_entries,
-    opusinfo,
+    event_list: list,
+    bnk_entries: dict,
+    opusinfo: dict,
     keep_empty=True,
     sound_list_format=False,
 ):
@@ -180,10 +196,14 @@ async def _create_index(
         index = sounds
 
     # Sort the index
-    return dict(sorted(index.items()))
+    return dict(
+        sorted(
+            index.items(), key=lambda a: a[0].lower() if isinstance(a[0], str) else a[0]
+        )
+    )
 
 
-def _find_sounds(entry_id, switches: list = None, stack: set = None):
+def _find_sounds(entry_id: int, switches: list = None, stack: set = None):
     entries = None
     try:
         entries = __g_bnk_entries[entry_id]
@@ -193,7 +213,7 @@ def _find_sounds(entry_id, switches: list = None, stack: set = None):
     sounds = []
 
     for entry in entries:
-        sounds.extend(_find_sounds_in_entry(entry, switches, stack))
+        _find_sounds_in_entry(sounds, entry, switches, stack)
 
     # Deduplicate
     seen_hashes = set()
@@ -206,27 +226,30 @@ def _find_sounds(entry_id, switches: list = None, stack: set = None):
     return deduplicated
 
 
-def _find_sounds_in_entry(entry, gender: str = None, stack: set = None):
-    stack = stack if stack is not None else set()
-    stack.add(entry.ulID)
-
+def _find_sounds_in_entry(
+    sounds: list, entry: int, gender: str = None, stack: set = None
+):
     # Our goal
     if entry.name in ("CAkSound", "CAkMusicTrack"):
-        return [*(_find_sound_in_opusinfo(child, gender) for child in entry.children)]
+        for child in entry.children:
+            sounds.append(
+                _find_sound_in_opusinfo(child, gender, entry.name == "CAkMusicTrack")
+            )
+        return
 
     # Gender detection
     if "ulSwitchID" in entry.data:
         for switch_id in entry.data["ulSwitchID"]:
-            gender = {
-                3111576190: "male",
-                2204441813: "female",
-            }.get(switch_id, gender)
+            if switch_id in _GENDERS:
+                gender = _GENDERS[switch_id]
+                break
 
-    return _find_sounds_children(entry.children, gender, stack)
+    stack = stack if stack is not None else set()
+    stack.add(entry.ulID)
+    _find_sounds_children(sounds, entry.children, gender, stack)
 
 
-def _find_sounds_children(children: list, gender: str, stack: set):
-    sounds = []
+def _find_sounds_children(sounds: list, children: list[int], gender: str, stack: set):
     for child in children:
         if child in stack:
             # Loop detected
@@ -236,51 +259,27 @@ def _find_sounds_children(children: list, gender: str, stack: set):
             sounds.extend(_find_sounds(child, gender, stack))
         except RecursionError:
             # tqdm.write might cause stack error
-            print(f"\nRecursionError while scanning {child}, stack: {stack}")
+            print(f"\nRecursionError while scanning {child}, stack: {list(stack)}")
 
     return sounds
 
 
-def _find_sound_in_opusinfo(sound_hash, gender: str = None):
-    index = -1
-    try:
-        index = __g_opusinfo["OpusHashes"].index(sound_hash)
-    except ValueError:
-        # Not found
-        return _sound_entry(sound_hash, False, False, gender)
+def _find_sound_in_opusinfo(sound_hash: int, gender: str = None, is_music=False):
+    if sound_hash not in __g_opusinfo:
+        return _sound_entry(sound_hash, False, is_music, gender)
 
-    pak_index = __g_opusinfo["PackIndices"][index]
-    index_in_pak = -1
-    for i in range(index, 0, -1):
-        if __g_opusinfo["PackIndices"][i] != pak_index:
-            index_in_pak = index - (i + 1)
-            break
+    entry = __g_opusinfo[sound_hash]
 
-    return _sound_entry(
-        sound_hash,
-        True,
-        False,
-        gender,
-        {
-            "pak": f"sfx_container_{pak_index}.opuspak",
-            "indexInPak": index_in_pak,
-            "opusOffset": __g_opusinfo["OpusOffsets"][index],
-            "riffOpusOffset": __g_opusinfo["RiffOpusOffsets"][index],
-            "opusStreamLength": __g_opusinfo["OpusStreamLengths"][index],
-            "wavStreamLength": __g_opusinfo["WavStreamLengths"][index],
-        },
-    )
+    return _sound_entry(sound_hash, True, is_music, gender, entry)
 
 
 def _sound_entry(
     sound_hash: int, in_pak: bool, is_music: bool, gender: str = None, data: dict = None
 ):
-    entry = {
-        "hash": sound_hash,
-        "inPak": in_pak,
-        "isMusic": is_music,
-        **(data or {}),
-    }
+    entry = data or {}
+    entry["hash"] = sound_hash
+    entry["inPak"] = in_pak
+    entry["isMusic"] = is_music
     if gender is not None:
         entry["v_gender"] = gender
 
