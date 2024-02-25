@@ -4,7 +4,6 @@ import os
 import shutil
 import sys
 from argparse import Namespace
-from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 from tqdm import tqdm
@@ -18,8 +17,8 @@ from lib import (
     rvc,
     sfx_mapping,
     tts,
+    vgmstream,
     wolvenkit,
-    ww2ogg,
     wwise,
     wwiser,
 )
@@ -30,27 +29,41 @@ load_dotenv(".env")
 async def sfx_metadata(args: Namespace):
     """Extracts SFX metadata from the game."""
 
-    pbar = tqdm(total=4, desc="Extracting SFX metadata")
+    parallel = util.Parallel("Extracting SFX metadata", unit="tasks", total=4)
 
-    await wolvenkit.uncook_json("eventsmetadata\\.json", args.output)
-    pbar.update(1)
+    async def eventsmetadata():
+        await wolvenkit.uncook_json("eventsmetadata\\.json", args.output)
+        parallel.finished()
 
-    await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
-    pbar.update(1)
+    async def bnk_opusinfo():
+        await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
+        parallel.finished()
 
-    await wwiser.export_banks(args.output, args.output)
-    pbar.update(1)
+    parallel.run(wwiser.export_banks, args.output, args.output)
 
-    await opustoolz.export_info(
+    parallel.run(
+        opustoolz.export_info,
         os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
         os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
     )
-    pbar.update(1)
+
+    parallel.prepare()
+    await bnk_opusinfo()
+    await asyncio.gather(parallel.wait(), eventsmetadata())
 
 
 async def map_sfx(args: Namespace):
     """Create a map of SFX events. Needs sfx_metadata."""
-    banks = await wwiser.parse_banks(args.metadata_path)
+
+    banks_cache = os.path.join(args.metadata_path, "banks.json")
+    banks = {}
+
+    try:
+        with open(banks_cache, "r", encoding="utf-8") as f:
+            tqdm.write("Reading parsed banks cache...")
+            banks = json.load(f)
+    except (IOError, ValueError):
+        banks = await wwiser.parse_banks(args.metadata_path, banks_cache)
 
     await sfx_mapping.build_sfx_event_index(
         banks,
@@ -94,36 +107,39 @@ async def extract_all_sfx(args: Namespace):
             else:
                 other_hashes.add(str(sound["hash"]))
 
+    out_path = os.path.join(args.sfx_cache_path, "base\\sound\\soundbanks")
+    os.makedirs(out_path, exist_ok=True)
+
     # Run SFX in background
     sfx_task = asyncio.create_task(
         _extract_sfx(list(pak_hashes), args.sfx_cache_path, args.output)
     )
 
-    tqdm.write("Extracting embedded SFX...")
     # Run in other thread to keep the above task running
-    embedded_task = asyncio.create_task(
-        asyncio.to_thread(
-            wwiser.extract_embeded_sfx,
-            args.metadata_path,
-            os.path.join(args.sfx_cache_path, "base\\sound\\soundbanks"),
+    export_bnks = util.Parallel("Extracting embedded SFX")
+    for file in util.find_files(args.metadata_path, ".bnk"):
+        export_bnks.run(
+            vgmstream.export_embedded,
+            os.path.join(args.metadata_path, file),
+            out_path,
         )
-    )
+    embedded_task = asyncio.create_task(export_bnks.wait())
 
     await wolvenkit.extract_files(
         "base\\\\sound\\\\soundbanks\\\\.*\\.wem",
         args.sfx_cache_path,
+        log=False,
     )
-    other_hashes.update(await embedded_task)
 
     not_found = 0
     for sound in tqdm(other_hashes, desc="Converting wem SFX"):
         input_path = os.path.join(
             args.sfx_cache_path, f"base\\sound\\soundbanks\\{sound}.wem"
         )
-        output_path = os.path.join(args.output, f"{sound}.ogg")
+        output_path = os.path.join(args.output, f"{sound}.wav")
         if os.path.exists(input_path):
             try:
-                await ww2ogg.ww2ogg(input_path, output_path)
+                await vgmstream.decode(input_path, output_path)
             except util.SubprocessException:
                 tqdm.write(f"Converting {sound} failed, continuing...")
                 not_found += 1
@@ -136,8 +152,8 @@ async def extract_all_sfx(args: Namespace):
         f"Finished extracting wem SFX, {not_found}/{total_other} were not found or failed."
     )
 
-    tqdm.write("Waiting for opus pak extraction to finish...")
-    await sfx_task
+    tqdm.write("Waiting for threads to finish...")
+    await asyncio.gather(embedded_task, sfx_task)
 
     tqdm.write("Done.")
 
@@ -149,6 +165,7 @@ async def _extract_sfx(hashes: list, cache_path: str, output: str, paks: list = 
         + ("|".join(paks) if paks else ".*")
         + ")\\.opuspak|\\.opusinfo)",
         cache_path,
+        log=paks is not None,
     )
 
     tqdm.write("Extracting SFX audio files from the containers...")
@@ -182,7 +199,7 @@ async def extract_files(args: Namespace):
 
 async def export_wem(args: Namespace):
     """Converts all cached .wem files to a usable format."""
-    await ww2ogg.ww2ogg_all(args.input, args.output)
+    await vgmstream.decode_all(args.input, args.output)
 
 
 async def isolate_vocals(args: Namespace):

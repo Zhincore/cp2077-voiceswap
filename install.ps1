@@ -12,10 +12,10 @@ param (
 )
 
 $libs = @{
-    "OpusToolZ"   = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
-    "WolvenKit"   = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.2/WolvenKit.Console-8.12.2.zip"
-    "ww2ogg"      = "https://github.com/hcs64/ww2ogg/releases/download/0.24/ww2ogg024.zip"
-    "wwiser"      = "https://github.com/bnnm/wwiser/files/13074590/wwiser.zip"
+    "OpusToolZ"     = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
+    "WolvenKit"     = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.2/WolvenKit.Console-8.12.2.zip"
+    "vgmstream"     = "https://github.com/vgmstream/vgmstream/releases/download/r1896/vgmstream-win.zip"
+    "wwiser"        = "https://github.com/bnnm/wwiser/files/13074590/wwiser.zip"
 }
 
 function Get-Lib {

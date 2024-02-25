@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 __g_bnk_entries = {}
 __g_opusinfo = {}
+__g_eventsmetadata = {}
 
 # ulSwitchId mapping to gender
 _GENDERS = {
@@ -82,24 +83,24 @@ async def build_sfx_event_index(
             index_in_pak += 1
 
     tqdm.write("Loading events metadata...")
-    events = {}
+    eventmetadata = {}
 
     with open(
         os.path.join(metadata_path, "base/sound/event/eventsmetadata.json.json"),
         "r",
         encoding="utf-8",
     ) as f:
-        events = json.load(f)["Data"]["RootChunk"]["root"]["Data"]
-
-    # This could remain a chain iterator, but list gives us precise progress
-    event_list = list(chain(*(v for v in events.values() if isinstance(v, list))))
+        data = json.load(f)["Data"]["RootChunk"]["root"]["Data"]
+        for key, value in data.items():
+            if isinstance(value, list):
+                eventmetadata[key] = {item["wwiseId"]: item for item in value}
 
     tqdm.write("Creating an SFX map...")
     index = {}
 
     try:
         index = await _create_index(
-            event_list, banks, opusinfo, keep_empty, sound_list_format
+            eventmetadata, banks, opusinfo, keep_empty, sound_list_format
         )
     finally:
         tqdm.write("Writing sfx index...")
@@ -112,20 +113,24 @@ async def build_sfx_event_index(
             )
 
 
-def _load_data(shared_bnk_entries: str, shared_opusinfo: str):
-    global __g_bnk_entries, __g_opusinfo
+def _load_data(
+    shared_bnk_entries: dict, shared_opusinfo: dict, shared_eventsmetadata: dict
+):
+    global __g_bnk_entries, __g_opusinfo, __g_eventsmetadata
     __g_bnk_entries = shared_bnk_entries
     __g_opusinfo = shared_opusinfo
+    __g_eventsmetadata = shared_eventsmetadata
 
 
 async def _create_index(
-    event_list: list,
+    eventmetadata: dict,
     bnk_entries: dict,
     opusinfo: dict,
     keep_empty=True,
     sound_list_format=False,
 ):
     index = {}
+    event_list = list(eventmetadata["events"].values())
 
     tqdm.write("Preparing workers...")
 
@@ -133,8 +138,11 @@ async def _create_index(
     with Manager() as manager:
         shared_bnk_entries = manager.dict(bnk_entries)
         shared_opusinfo = manager.dict(opusinfo)
+        shared_eventsmetadata = manager.dict(eventmetadata)
+
         with concurrent.futures.ProcessPoolExecutor(
-            initializer=_load_data, initargs=(shared_bnk_entries, shared_opusinfo)
+            initializer=_load_data,
+            initargs=(shared_bnk_entries, shared_opusinfo, shared_eventsmetadata),
         ) as pool:
             pbar = tqdm(total=len(event_list), desc="Scanning events", unit="event")
 
@@ -203,17 +211,16 @@ async def _create_index(
     )
 
 
-def _find_sounds(entry_id: int, switches: list = None, stack: set = None):
+def _find_sounds(entry_id: int, params: dict = None, stack: set = None):
     entries = None
     try:
         entries = __g_bnk_entries[entry_id]
     except KeyError:
         return []
-
     sounds = []
 
     for entry in entries:
-        _find_sounds_in_entry(sounds, entry, switches, stack)
+        _find_sounds_in_entry(sounds, entry, params, stack)
 
     # Deduplicate
     seen_hashes = set()
@@ -227,36 +234,81 @@ def _find_sounds(entry_id: int, switches: list = None, stack: set = None):
 
 
 def _find_sounds_in_entry(
-    sounds: list, entry: int, gender: str = None, stack: set = None
+    sounds: list, entry: int, params: dict = None, stack: set = None
 ):
     # Our goal
-    if entry.name in ("CAkSound", "CAkMusicTrack"):
+    if "sourceID" in entry.data:
+        is_music = entry.name == "CAkMusicTrack"
         for child in entry.children:
+            sound = {}
+
+            # Find where is it embedded
+            embedded = False
+            if child in __g_bnk_entries:
+                embedded_in = [
+                    obj.data["bank"]
+                    for obj in __g_bnk_entries[child]
+                    if "bank" in obj.data
+                ]
+                if len(embedded_in) > 0:
+                    sound["embeddedIn"] = embedded_in
+                    embedded = True
+
+            # Find data in opusinfo
+            in_pak = False
+            if child in __g_opusinfo:
+                sound.update(__g_opusinfo[child])
+                in_pak = True
+
             sounds.append(
-                _find_sound_in_opusinfo(child, gender, entry.name == "CAkMusicTrack")
+                _sound_entry(child, in_pak, is_music, embedded, params, sound)
             )
         return
 
-    # Gender detection
-    if "ulSwitchID" in entry.data:
-        for switch_id in entry.data["ulSwitchID"]:
-            if switch_id in _GENDERS:
-                gender = _GENDERS[switch_id]
-                break
-
-    stack = stack if stack is not None else set()
+    params = {**params} if params else {}
+    stack = stack or set()
     stack.add(entry.ulID)
-    _find_sounds_children(sounds, entry.children, gender, stack)
+
+    _update_params("RTPCID", entry.data, "gameParameter", params)
+    _update_params("ulStateID", entry.data, "state", params)
+    _update_params("ulSwitchStateID", entry.data, "stateGroup", params)
+    _update_params("ulSwitchID", entry.data, "switch", params)
+    _update_params("ulSwitchGroupID", entry.data, "switchGroup", params)
+
+    if entry.name == "CAkAuxBus":
+        _update_params("ulID", entry, "bus", params)
+
+    _find_sounds_children(sounds, entry.children, params, stack)
 
 
-def _find_sounds_children(sounds: list, children: list[int], gender: str, stack: set):
+def _update_params(data_id: str, data: dict, param_name: str, params: dict):
+    if data_id not in data:
+        return
+
+    if param_name not in params:
+        params[param_name] = []
+
+    param_values = params[param_name]
+
+    for data_item_id in data[data_id]:
+        data_item_id = int(data_item_id)
+        if data_item_id not in __g_eventsmetadata[param_name]:
+            continue
+
+        value = __g_eventsmetadata[param_name][data_item_id]["redId"]["$value"]
+
+        if value not in param_values:
+            param_values.append(value)
+
+
+def _find_sounds_children(sounds: list, children: list[int], params: dict, stack: set):
     for child in children:
         if child in stack:
             # Loop detected
             continue
 
         try:
-            sounds.extend(_find_sounds(child, gender, stack))
+            sounds.extend(_find_sounds(child, params, stack))
         except RecursionError:
             # tqdm.write might cause stack error
             print(f"\nRecursionError while scanning {child}, stack: {list(stack)}")
@@ -264,23 +316,25 @@ def _find_sounds_children(sounds: list, children: list[int], gender: str, stack:
     return sounds
 
 
-def _find_sound_in_opusinfo(sound_hash: int, gender: str = None, is_music=False):
-    if sound_hash not in __g_opusinfo:
-        return _sound_entry(sound_hash, False, is_music, gender)
-
-    entry = __g_opusinfo[sound_hash]
-
-    return _sound_entry(sound_hash, True, is_music, gender, entry)
-
-
 def _sound_entry(
-    sound_hash: int, in_pak: bool, is_music: bool, gender: str = None, data: dict = None
+    sound_hash: int,
+    in_pak: bool,
+    is_music: bool,
+    is_embedded: bool,
+    params: dict = None,
+    data: dict = None,
 ):
-    entry = data or {}
-    entry["hash"] = sound_hash
-    entry["inPak"] = in_pak
-    entry["isMusic"] = is_music
-    if gender is not None:
-        entry["v_gender"] = gender
+    entry = {
+        "hash": sound_hash,
+        "inPak": in_pak,
+        "isMusic": is_music,
+        "isEmbedded": is_embedded,
+    }
+
+    if params:
+        entry.update(params)
+
+    if data:
+        entry.update(data)
 
     return entry

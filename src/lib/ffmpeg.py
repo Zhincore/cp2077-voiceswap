@@ -12,7 +12,7 @@ FFMPEG_ARGS = (
 )
 
 
-async def _spawn_ffmpeg(*args, **kwargs):
+async def spawn_ffmpeg(*args, **kwargs):
     return await spawn(
         "FFmpeg",
         os.path.join(os.getenv("FFMPEG_PATH"), "ffmpeg"),
@@ -25,7 +25,7 @@ async def _spawn_ffmpeg(*args, **kwargs):
 async def convert(source: str, output: str, *args):
     """Converts a file to a file"""
 
-    process = await _spawn_ffmpeg(
+    process = await spawn_ffmpeg(
         *("-i", source),
         *args,
         output,
@@ -70,7 +70,7 @@ async def merge_vocals(
         )
         output = os.path.join(output_path, path, base_name)
 
-        process = await _spawn_ffmpeg(
+        process = await spawn_ffmpeg(
             *("-i", os.path.join(vocals_path, path, name)),
             *("-i", os.path.join(others_path, path, other_name)),
             "-filter_complex",

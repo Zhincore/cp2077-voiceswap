@@ -20,7 +20,7 @@ def _get_nonmod_folders():
     return folders
 
 
-async def extract_files(pattern: str, output_path: str):
+async def extract_files(pattern: str, output_path: str, log=True):
     """Extracts files from the game matching the given pattern."""
 
     tqdm.write("Starting WolvenKit unbundle...")
@@ -32,6 +32,7 @@ async def extract_files(pattern: str, output_path: str):
         *(chain(*map(lambda a: ("-p", a), _get_nonmod_folders()))),
         *("-o", output_path),
         *("-r", pattern),
+        stdout=None if log else asyncio.subprocess.DEVNULL,
     )
     result = await process.wait()
 
@@ -40,7 +41,7 @@ async def extract_files(pattern: str, output_path: str):
     tqdm.write("Extracting done!")
 
 
-async def uncook_json(pattern: str, output_path: str):
+async def uncook_json(pattern: str, output_path: str, log=True):
     """Extract json files from the game matching the given pattern."""
 
     tqdm.write("Starting WolvenKit uncook...")
@@ -54,6 +55,7 @@ async def uncook_json(pattern: str, output_path: str):
         "-u",
         *("-r", pattern),
         *("-o", output_path),
+        stdout=None if log else asyncio.subprocess.DEVNULL,
     )
     result = await process.wait()
 

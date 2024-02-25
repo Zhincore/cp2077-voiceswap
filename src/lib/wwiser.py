@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import json
 import os
 import sys
 import time
@@ -40,8 +41,8 @@ _g_queue = None
 # How often to update progress bar
 _UPDATE_DELAY = 0.005
 
-# Thank you https://www.nexusmods.com/cyberpunk2077/mods/11075
 _CHILD_FIELDS = {
+    # Thank you https://www.nexusmods.com/cyberpunk2077/mods/11075
     "CAkEvent": "ulActionID",
     "CAkActionSetSwitch": "idExt",
     "CAkActionSetAkProp": "idExt",
@@ -55,12 +56,24 @@ _CHILD_FIELDS = {
     "CAkMusicSwitchCntr": "ulChildID",
     "CAkMusicRanSeqCntr": "ulChildID",
     "CAkMusicSegment": "ulChildID",
+    # Additional nodes found
+    "CAkSwitchPackage": "NodeID",
+    "CAkAuxBus": "fxID",
     # Goals
+    "CAkFxCustom": "sourceID",  # Embedded stuff I think?
+    "CAkFxShareSet": "sourceID",  # Looks like also embedded stuff??
     "CAkSound": "sourceID",
     "CAkMusicTrack": "sourceID",
 }
 # Fields we might need
-_DATA_FILEDS = ("ulSwitchID",)
+_DATA_FILEDS = (
+    "RTPCID",
+    "ulSwitchID",
+    "ulSwitchGroupID",
+    "ulStateID",
+    "ulSwitchStateID",
+    "sourceID",
+)
 
 
 class BankObject:
@@ -82,18 +95,21 @@ class BankObject:
 
 
 class BanksParser:
+    __bank_folder: str
     __p = None
     __progress = None
     __last_progress = 0
 
-    __sources: dict
-
     __last_line = 0
     __object: BankObject = None
     __list_name: str = None
+
+    __bank_path: str
     __objects: dict
 
-    def __init__(self):
+    def __init__(self, bank_folder: str):
+        self.__bank_folder = bank_folder
+
         self.__p = xml.parsers.expat.ParserCreate()
         self.__p.StartElementHandler = self.__start_element
         self.__p.EndElementHandler = self.__end_element
@@ -130,38 +146,47 @@ class BanksParser:
         name = attrs["name"] if "name" in attrs else None
 
         match node_type:
-            case "field":
-                value = attrs["value"]
+            case "root":
+                self.__bank_path = os.path.relpath(
+                    os.path.join(attrs["path"], attrs["filename"]),
+                    self.__bank_folder,
+                )
 
+            case "field":
                 if self.__object is None:
                     return
+
+                value = attrs["value"]
 
                 if name == self.__object.child_field:
                     self.__object.children.add(int(value))
 
-                elif name == "ulID":
+                if attrs["type"] == "sid":
                     ul_id = int(value)
                     self.__object.ulID = ul_id
                     if ul_id not in self.__objects:
                         self.__objects[ul_id] = []
                     self.__objects[ul_id].append(self.__object)
 
-                elif name in _DATA_FILEDS:
+                if name in _DATA_FILEDS:
                     if name not in self.__object.data:
                         self.__object.data[name] = set()
                     self.__object.data[name].add(value)
 
             case "object":
-                if name.startswith("CAk"):
+                is_media = name == "MediaHeader"
+                if is_media or name.startswith("CAk"):
                     self.__object = BankObject(name)
+                    if is_media:
+                        self.__object.data["bank"] = self.__bank_path
 
     def __end_element(self, _node_type: str):
         self.update__progress()
 
 
-def _parse_bank(root: str):
+def _parse_bank(folder: str, root: str):
     global _g_queue
-    p = BanksParser()
+    p = BanksParser(folder)
 
     result = p.parse(root, _g_queue.put)
 
@@ -175,7 +200,7 @@ def _initialize_worker(queue):
     _g_queue = queue
 
 
-async def parse_banks(banks_folder: str):
+async def parse_banks(banks_folder: str, cache_path: str = None):
     """Parses banks.xml"""
 
     result = {}
@@ -206,7 +231,9 @@ async def parse_banks(banks_folder: str):
         )
 
         async def do_task(root: str):
-            sub_result = await loop.run_in_executor(pool, _parse_bank, "<root" + root)
+            sub_result = await loop.run_in_executor(
+                pool, _parse_bank, banks_folder, "<root" + root
+            )
             result.update(sub_result)
 
         async def watch_progress():
@@ -226,106 +253,24 @@ async def parse_banks(banks_folder: str):
     # the progress bars leave empty lines and last one isn't full width...
     tqdm.write("Parsing banks.xml finished.")
 
-    # tqdm.write("Saving result...")
-    # with open("banks.json", "w", encoding="utf-8") as f:
-    #     json.dump(result, f, indent=4, default=_json_default)
+    if cache_path:
+        tqdm.write("Saving result...")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=4, default=_json_default)
 
     return result
 
 
-def extract_embeded_sfx(banks_folder: str, output_folder: str):
-    """Extracts SFX files that are embedded in the bnk files."""
+def _json_default(d):
+    match d:
+        case set():
+            return list(d)
 
-    banks = {}
+    if hasattr(d, "as_dict"):
+        return d.as_dict()
 
-    last_bank = {"files": []}
-    last_file = {}
-    in_list = False
+    if hasattr(d, "__dict__"):
+        return d.__dict__
 
-    p = xml.parsers.expat.ParserCreate()
-    pbar = None
-
-    def start_element(name: str, attrs: dict):
-        nonlocal last_bank, last_file, in_list
-
-        pbar.update(p.CurrentLineNumber - pbar.n)
-
-        # Starting new bank
-        if name == "root":
-            last_bank = {"files": []}
-            banks[os.path.join(attrs["path"], attrs["filename"])] = last_bank
-            return
-
-        obj_name = attrs["name"] if "name" in attrs else None
-
-        if obj_name == "pData" and attrs["type"] == "gap":
-            last_bank["offset"] = int(attrs["offset"])
-
-        if name == "list" and obj_name == "pLoadedMedia":
-            in_list = True
-            return
-
-        if in_list:
-            match obj_name:
-                case "MediaHeader":
-                    last_bank["files"].append(last_file)
-                    last_file = {}
-                case "id" | "uOffset" | "uSize":
-                    last_file[obj_name] = int(attrs["value"])
-
-    def end_element(name: str):
-        nonlocal in_list
-        if name == "list":
-            in_list = False
-
-    tqdm.write("Reading banks.xml...")
-    with open(os.path.join(banks_folder, "banks.xml"), "r", encoding="utf-8") as f:
-        data = f.read()
-
-        pbar = tqdm(total=data.count("\n"), desc="Parsing banks.xml", unit="lines")
-
-        p.StartElementHandler = start_element
-        p.EndElementHandler = end_element
-        p.Parse("<data>" + data + "</data>")
-        pbar.close()
-
-    os.makedirs(output_folder, exist_ok=True)
-
-    extracted_files = []
-    for bnk_path, bnk in tqdm(banks.items(), desc="Scanning bnk files...", unit="file"):
-        if len(bnk["files"]) == 0:
-            continue
-
-        with open(bnk_path, "rb") as f:
-            for file in tqdm(
-                bnk["files"], desc="Extracting files...", unit="file", position=1
-            ):
-                if "id" not in file or file["uOffset"] == 0:
-                    continue
-
-                out_path = os.path.join(output_folder, str(file["id"]) + ".wem")
-
-                f.seek(bnk["offset"] + file["uOffset"])
-                with open(out_path, "wb") as out:
-                    out.write(f.read(file["uSize"]))
-
-                extracted_files.append(file["id"])
-
-    tqdm.write(f"Extracted {len(extracted_files)} embedded files.")
-
-    return extracted_files
-
-
-# def _json_default(d):
-#     match d:
-#         case set():
-#             return list(d)
-
-#     if hasattr(d, "as_dict"):
-#         return d.as_dict()
-
-#     if hasattr(d, "__dict__"):
-#         return d.__dict__
-
-#     d_type = type(d)
-#     raise TypeError(f"Object of type {d_type} is not JSON serializable")
+    d_type = type(d)
+    raise TypeError(f"Object of type {d_type} is not JSON serializable")
