@@ -15,7 +15,7 @@ $libs = @{
     "OpusToolZ"     = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
     "WolvenKit"     = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.2/WolvenKit.Console-8.12.2.zip"
     "vgmstream"     = "https://github.com/vgmstream/vgmstream/releases/download/r1896/vgmstream-win.zip"
-    "wwiser"        = "https://github.com/bnnm/wwiser/files/13074590/wwiser.zip"
+    "wwiser"        = "https://github.com/bnnm/wwiser/archive/refs/heads/master.zip"
 }
 
 function Get-Lib {
@@ -31,19 +31,28 @@ function Get-Lib {
         $FolderName = $Name
     }
 
-    $TargetPath = (Join-Path -Path ".\libs" -ChildPath $FolderName)
+    if ($FileName -match '\.zip$') {
+        $TargetPath = (Join-Path -Path ".\libs" -ChildPath $FolderName)
+        $TmpPath = (Join-Path -Path ".\libs" -ChildPath $FileName)
 
-    if (Test-Path -Path $TargetPath -PathType Container) {
-        Write-Information -MessageData "Cleaning up $TargetPath and reinstalling" -InformationAction Continue
+        if (Test-Path -Path $TargetPath -PathType Container) {
+            Write-Information -MessageData "Cleaning up $TargetPath and reinstalling" -InformationAction Continue
 
-        Remove-Item -Path $TargetPath -Recurse
+            Remove-Item -Path $TargetPath -Recurse
+        }
+
+        Write-Information -MessageData "Installing $FileName to $TargetPath" -InformationAction Continue
+
+        Invoke-WebRequest -Uri $URL -OutFile $TmpPath 
+        Expand-Archive -Path $TmpPath -DestinationPath $TargetPath
+        Remove-Item -Path $TmpPath
+    } else {
+        $TargetPath = (Join-Path -Path ".\libs" -ChildPath $FileName)
+
+        Write-Information -MessageData "Installing $FileName to $TargetPath" -InformationAction Continue
+
+        Invoke-WebRequest -Uri $URL -OutFile $TargetPath
     }
-
-    Write-Information -MessageData "Installing $FileName to $TargetPath" -InformationAction Continue
-
-    Invoke-WebRequest -Uri $URL -OutFile $FileName
-    Expand-Archive -Path $FileName -DestinationPath $TargetPath
-    Remove-Item -Path $FileName
 }
 
 if ($SkipLibs) {

@@ -32,11 +32,11 @@ async def sfx_metadata(args: Namespace):
     parallel = util.Parallel("Extracting SFX metadata", unit="tasks", total=4)
 
     async def eventsmetadata():
-        await wolvenkit.uncook_json("eventsmetadata\\.json", args.output)
+        await wolvenkit.uncook_json("eventsmetadata\\.json", args.output, log=False)
         parallel.finished()
 
     async def bnk_opusinfo():
-        await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output)
+        await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output, log=False)
         parallel.finished()
 
     parallel.run(wwiser.export_banks, args.output, args.output)

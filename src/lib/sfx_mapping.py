@@ -149,6 +149,7 @@ async def _create_index(
         await asyncio.gather(*(do_task(event) for event in reversed(event_list)))
         pbar.close()
         found.close()
+        tqdm.write("Cleaning up...")
 
     # Sort the index
     return dict(sorted(index.items(), key=lambda a: a[0]))
@@ -188,23 +189,40 @@ def _find_sounds(
 def _find_sounds_in_entry(
     sounds: dict, entry: dict, params: dict = None, stack: set = None
 ):
-    # Our goal
-    if "sourceID" in entry["data"]:
+    params = params.copy()
+    _update_params("RTPCID", entry["data"], "gameParameter", params)
+    _update_params("ulStateID", entry["data"], "state", params)
+    _update_params("ulSwitchStateID", entry["data"], "stateGroup", params)
+    _update_params("ulSwitchID", entry["data"], "switch", params)
+    _update_params("ulSwitchGroupID", entry["data"], "switchGroup", params)
+
+    if entry["name"] == "CAkAuxBus":
+        _update_params("ulID", entry, "bus", params)
+
+    # Our goal  # NOTE: casing issue in wwiser
+    if "sourceID" in entry["data"] or "sourceId" in entry["data"]:
         is_music = entry["name"] == "CAkMusicTrack"
-        for child in entry["data"]["sourceID"]:
+        for child in entry["children"]:
             sound = {}
 
             # Find where is it embedded
             embedded = False
+            has_children = False
             if child in __g_bnk_entries:
-                embedded_in = [
-                    obj["data"]["bank"]
-                    for obj in __g_bnk_entries[child]
-                    if "bank" in obj["data"]
-                ]
+                embedded_in = []
+                for sub_child in __g_bnk_entries[child]:
+                    if "bank" in sub_child["data"]:
+                        embedded_in.append(sub_child["data"]["bank"])
+                    elif "sourceId" in sub_child["data"]:
+                        has_children = True
+                        break
+
                 if len(embedded_in) > 0:
                     sound["embeddedIn"] = embedded_in
                     embedded = True
+
+            if has_children:
+                continue
 
             # Find data in opusinfo
             in_pak = False
@@ -218,17 +236,6 @@ def _find_sounds_in_entry(
                 sounds[child] = _merge_sound_entry(sounds[child], sound_entry)
             else:
                 sounds[child] = sound_entry
-            return
-
-    params = params.copy()
-    _update_params("RTPCID", entry["data"], "gameParameter", params)
-    _update_params("ulStateID", entry["data"], "state", params)
-    _update_params("ulSwitchStateID", entry["data"], "stateGroup", params)
-    _update_params("ulSwitchID", entry["data"], "switch", params)
-    _update_params("ulSwitchGroupID", entry["data"], "switchGroup", params)
-
-    if entry["name"] == "CAkAuxBus":
-        _update_params("ulID", entry, "bus", params)
 
     for child in entry["direct_children"]:
         _find_sounds_in_entry(sounds, child, params, stack)

@@ -19,13 +19,14 @@ async def export_banks(bnk_path: str, output: str):
 
     process = await asyncio.create_subprocess_exec(
         sys.executable,
-        os.path.abspath("./libs/wwiser/wwiser.pyz"),
+        os.path.abspath("./libs/wwiser/wwiser-master/wwiser.py"),
         *("-d", "xml"),
         *("-r", os.path.join(os.path.abspath(bnk_path), "**\\*.bnk")),
         cwd=os.path.abspath(output),
         stdin=asyncio.subprocess.DEVNULL,
     )
 
+    # TODO: Translate output into TQDM
     result = await process.wait()
 
     if result != 0:
@@ -60,9 +61,9 @@ _CHILD_FIELDS = {
     "CAkLayer": "ulAssociatedChildID",
     "CAkSwitchPackage": "NodeID",
     "CAkAuxBus": "fxID",
-    # Goals
-    "CAkFxCustom": "sourceID",  # Embedded stuff I think?
-    "CAkFxShareSet": "sourceID",  # Looks like also embedded stuff??
+    # Goals # NOTE: casing issue in wwiser
+    "CAkFxCustom": "sourceId",  # Embedded stuff I think?
+    "CAkFxShareSet": "sourceId",  # Looks like also embedded stuff??
     "CAkSound": "sourceID",
     "CAkMusicTrack": "sourceID",
 }
@@ -83,6 +84,7 @@ _DATA_FILEDS = (
     "ulStateID",
     "ulSwitchStateID",
     "sourceID",
+    "sourceId",  # NOTE: casing issue in wwiser
 )
 
 
