@@ -47,16 +47,17 @@ _CHILD_FIELDS = {
     "CAkActionSetSwitch": "idExt",
     "CAkActionSetAkProp": "idExt",
     "CAkActionPlay": "idExt",
-    "CAkActionBreak": "idExt",
-    "CAkActionSeek": "idExt",
-    "CAkLayerCntr": "ulChildID",
-    "CAkSwitchCntr": "ulChildID",
+    # "CAkActionBreak": "idExt",
+    # "CAkActionSeek": "idExt",
+    # "CAkLayerCntr": "ulChildID",  # children is pLayers
+    # "CAkSwitchCntr": "ulChildID",  # children is SwitchList
     "CAkRanSeqCntr": "ulChildID",
     "CAkActorMixer": "ulChildID",
     "CAkMusicSwitchCntr": "ulChildID",
     "CAkMusicRanSeqCntr": "ulChildID",
     "CAkMusicSegment": "ulChildID",
     # Additional nodes found
+    "CAkLayer": "ulAssociatedChildID",
     "CAkSwitchPackage": "NodeID",
     "CAkAuxBus": "fxID",
     # Goals
@@ -64,6 +65,15 @@ _CHILD_FIELDS = {
     "CAkFxShareSet": "sourceID",  # Looks like also embedded stuff??
     "CAkSound": "sourceID",
     "CAkMusicTrack": "sourceID",
+}
+_ID_FIELD_OVERRIDES = {  # ulID by default
+    "MediaHeader": "id",
+    "CAkLayer": "ulLayerID",
+    "CAkSwitchPackage": "ulSwitchID",
+}
+_ALLOWED_LISTS = {
+    "CAkLayerCntr": "pLayers",
+    "CAkSwitchCntr": "SwitchList",
 }
 # Fields we might need
 _DATA_FILEDS = (
@@ -82,6 +92,7 @@ class BankObject:
     name: str
     ulID: int
     children: set[int]
+    direct_children: set["BankObject"]
     data: dict
 
     child_field: str = None
@@ -89,9 +100,19 @@ class BankObject:
     def __init__(self, name):
         self.name = name
         self.children = set()
+        self.direct_children = set()
         self.data = {}
 
         self.child_field = _CHILD_FIELDS.get(name, None)
+
+    def as_dict(self):
+        return {
+            "name": self.name,
+            "ulID": self.ulID,
+            "children": list(self.children),
+            "direct_children": list(c.as_dict() for c in self.direct_children),
+            "data": self.data,
+        }
 
 
 class BanksParser:
@@ -102,7 +123,7 @@ class BanksParser:
 
     __last_line = 0
     __object: BankObject = None
-    __list_name: str = None
+    __current_list_owner: BankObject = None
 
     __bank_path: str
     __objects: dict
@@ -159,14 +180,20 @@ class BanksParser:
                 value = attrs["value"]
 
                 if name == self.__object.child_field:
-                    self.__object.children.add(int(value))
+                    self.__object.children.add(value)
 
-                if attrs["type"] == "sid":
-                    ul_id = int(value)
-                    self.__object.ulID = ul_id
-                    if ul_id not in self.__objects:
-                        self.__objects[ul_id] = []
-                    self.__objects[ul_id].append(self.__object)
+                if name == _ID_FIELD_OVERRIDES.get(self.__object.name, "ulID"):
+                    self.__object.ulID = value
+
+                    if (
+                        self.__current_list_owner is not None
+                        and self.__current_list_owner is not self.__object
+                    ):
+                        self.__current_list_owner.direct_children.add(self.__object)
+                    else:
+                        if value not in self.__objects:
+                            self.__objects[value] = []
+                        self.__objects[value].append(self.__object)
 
                 if name in _DATA_FILEDS:
                     if name not in self.__object.data:
@@ -180,12 +207,20 @@ class BanksParser:
                     if is_media:
                         self.__object.data["bank"] = self.__bank_path
 
-    def __end_element(self, _node_type: str):
+            case "list":
+                if self.__object is not None and name == _ALLOWED_LISTS.get(
+                    self.__object.name, None
+                ):
+                    self.__current_list_owner = self.__object
+
+    def __end_element(self, node_type: str):
         self.update__progress()
+
+        if node_type == "list":
+            self.__current_list_owner = None
 
 
 def _parse_bank(folder: str, root: str):
-    global _g_queue
     p = BanksParser(folder)
 
     result = p.parse(root, _g_queue.put)
@@ -258,7 +293,7 @@ async def parse_banks(banks_folder: str, cache_path: str = None):
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=4, default=_json_default)
 
-    return result
+    return {k: [o.as_dict() for o in v] for k, v in result.items()}
 
 
 def _json_default(d):

@@ -2,20 +2,12 @@ import asyncio
 import concurrent.futures
 import json
 import os
-from itertools import chain
-from multiprocessing import Manager
 
 from tqdm import tqdm
 
 __g_bnk_entries = {}
 __g_opusinfo = {}
 __g_eventsmetadata = {}
-
-# ulSwitchId mapping to gender
-_GENDERS = {
-    "3111576190": "male",
-    "2204441813": "female",
-}
 
 
 def select_sfx(map_path: str, gender: str):
@@ -45,8 +37,6 @@ async def build_sfx_event_index(
     banks: dict,
     metadata_path: str,
     output_path: str,
-    keep_empty=True,
-    sound_list_format=False,
     minified=False,
 ):
     """Maps event names to audio source ids"""
@@ -99,9 +89,7 @@ async def build_sfx_event_index(
     index = {}
 
     try:
-        index = await _create_index(
-            eventmetadata, banks, opusinfo, keep_empty, sound_list_format
-        )
+        index = await _create_index(eventmetadata, banks, opusinfo)
     finally:
         tqdm.write("Writing sfx index...")
         with open(output_path, "w", encoding="utf-8") as f:
@@ -126,129 +114,93 @@ async def _create_index(
     eventmetadata: dict,
     bnk_entries: dict,
     opusinfo: dict,
-    keep_empty=True,
-    sound_list_format=False,
 ):
     index = {}
+
     event_list = list(eventmetadata["events"].values())
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ProcessPoolExecutor(
+        initializer=_load_data,
+        initargs=(bnk_entries, opusinfo, eventmetadata),
+    ) as pool:
+        found = tqdm(bar_format="Found {n_fmt} sounds", miniters=1)
+        pbar = tqdm(
+            total=len(event_list), desc="Scanning events", unit="event", leave=False
+        )
 
-    tqdm.write("Preparing workers...")
+        async def do_task(event):
+            sounds = await loop.run_in_executor(
+                pool, _find_sounds, str(event["wwiseId"])
+            )
 
-    loop = asyncio.get_running_loop()
-    with Manager() as manager:
-        shared_bnk_entries = manager.dict(bnk_entries)
-        shared_opusinfo = manager.dict(opusinfo)
-        shared_eventsmetadata = manager.dict(eventmetadata)
+            new_sounds = 0
+            for sound_hash, sound in sounds.items():
+                sound["events"] = [event["redId"]["$value"]]
+                sound["tags"] = [tag["$value"] for tag in event["tags"]]
 
-        with concurrent.futures.ProcessPoolExecutor(
-            initializer=_load_data,
-            initargs=(shared_bnk_entries, shared_opusinfo, shared_eventsmetadata),
-        ) as pool:
-            pbar = tqdm(total=len(event_list), desc="Scanning events", unit="event")
+                if sound_hash in index:
+                    index[sound_hash] = _merge_sound_entry(index[sound_hash], sound)
+                else:
+                    index[sound_hash] = sound
+                    new_sounds += 1
+            found.update(new_sounds)
+            pbar.update(1)
 
-            async def do_task(event):
-                sounds = await loop.run_in_executor(
-                    pool, _find_sounds, event["wwiseId"]
-                )
-                if keep_empty or len(sounds) > 0:
-                    index[event["redId"]["$value"]] = {
-                        "sounds": sounds,
-                        "tags": [tag["$value"] for tag in event["tags"]],
-                    }
-                pbar.update(1)
-
-            await asyncio.gather(*(do_task(event) for event in event_list))
-
-    # Convert the index into a list of sounds instead of events
-    if sound_list_format:
-        sounds = {}
-
-        for event_name, event in tqdm(
-            index.items(), desc="Converting to sound list format", unit="event"
-        ):
-            for sound in event["sounds"]:
-                sound_id = sound["hash"]
-                indexed_sound = sounds[sound_id] if sound_id in sounds else None
-
-                # Create sound if not found already
-                if indexed_sound is None:
-                    sounds[sound_id] = {**sound, "events": [], "tags": []}
-                    indexed_sound = sounds[sound_id]
-
-                # various vibe checks
-                old_pak = indexed_sound["pak"] if "pak" in indexed_sound else None
-                new_pak = sound["pak"] if "pak" in sound else None
-                old_index = (
-                    indexed_sound["indexInPak"]
-                    if "indexInPak" in indexed_sound
-                    else None
-                )
-                new_index = sound["indexInPak"] if "indexInPak" in sound else None
-
-                if old_pak != new_pak:
-                    tqdm.write(
-                        f"WARNING: Sound {sound_id} is both in {old_pak} and {new_pak}!"
-                    )
-                elif old_index != new_index:
-                    tqdm.write(f"WARNING! Sound {sound_id} has different pak indices!")
-
-                # Add new event name in a sorted way
-                indexed_sound["events"] = list(
-                    sorted(chain(indexed_sound["events"], [event_name]))
-                )
-                # Add new unique tags
-                indexed_sound["tags"].extend(
-                    [tag for tag in event["tags"] if tag not in indexed_sound["tags"]]
-                )
-
-        index = sounds
+        await asyncio.gather(*(do_task(event) for event in reversed(event_list)))
+        pbar.close()
+        found.close()
 
     # Sort the index
-    return dict(
-        sorted(
-            index.items(), key=lambda a: a[0].lower() if isinstance(a[0], str) else a[0]
-        )
-    )
+    return dict(sorted(index.items(), key=lambda a: a[0]))
 
 
-def _find_sounds(entry_id: int, params: dict = None, stack: set = None):
-    entries = None
-    try:
-        entries = __g_bnk_entries[entry_id]
-    except KeyError:
-        return []
-    sounds = []
+def _find_sounds(
+    entry_id: str, params: dict = None, stack: set = None, sounds: dict = None
+):
+    if (
+        stack and (len(stack) > 64 or entry_id in stack)
+    ) or entry_id not in __g_bnk_entries:
+        return {}
+
+    entries = __g_bnk_entries[entry_id]
+
+    if sounds is None:
+        sounds = {}
+    if params is None:
+        params = {}
+    if stack is None:
+        stack = set()
+    else:
+        stack = set(stack)
+    stack.add(entry_id)
 
     for entry in entries:
-        _find_sounds_in_entry(sounds, entry, params, stack)
+        try:
+            _find_sounds_in_entry(sounds, entry, params, stack)
+        except RecursionError:
+            str_stack = " > ".join(stack)
+            # tqdm.write might cause stack error
+            print(f"\nRecursionError while scanning {entry_id}, stack: {str_stack}")
 
-    # Deduplicate
-    seen_hashes = set()
-    deduplicated = []
-    for sound in sounds:
-        if sound["hash"] not in seen_hashes:
-            seen_hashes.add(sound["hash"])
-            deduplicated.append(sound)
-
-    return deduplicated
+    return sounds
 
 
 def _find_sounds_in_entry(
-    sounds: list, entry: int, params: dict = None, stack: set = None
+    sounds: dict, entry: dict, params: dict = None, stack: set = None
 ):
     # Our goal
-    if "sourceID" in entry.data:
-        is_music = entry.name == "CAkMusicTrack"
-        for child in entry.children:
+    if "sourceID" in entry["data"]:
+        is_music = entry["name"] == "CAkMusicTrack"
+        for child in entry["data"]["sourceID"]:
             sound = {}
 
             # Find where is it embedded
             embedded = False
             if child in __g_bnk_entries:
                 embedded_in = [
-                    obj.data["bank"]
+                    obj["data"]["bank"]
                     for obj in __g_bnk_entries[child]
-                    if "bank" in obj.data
+                    if "bank" in obj["data"]
                 ]
                 if len(embedded_in) > 0:
                     sound["embeddedIn"] = embedded_in
@@ -256,29 +208,33 @@ def _find_sounds_in_entry(
 
             # Find data in opusinfo
             in_pak = False
-            if child in __g_opusinfo:
-                sound.update(__g_opusinfo[child])
+            child_hash = int(child)
+            if child_hash in __g_opusinfo:
+                sound.update(__g_opusinfo[child_hash])
                 in_pak = True
 
-            sounds.append(
-                _sound_entry(child, in_pak, is_music, embedded, params, sound)
-            )
-        return
+            sound_entry = _sound_entry(child, in_pak, is_music, embedded, params, sound)
+            if child in sounds:
+                sounds[child] = _merge_sound_entry(sounds[child], sound_entry)
+            else:
+                sounds[child] = sound_entry
+            return
 
-    params = {**params} if params else {}
-    stack = stack or set()
-    stack.add(entry.ulID)
+    params = params.copy()
+    _update_params("RTPCID", entry["data"], "gameParameter", params)
+    _update_params("ulStateID", entry["data"], "state", params)
+    _update_params("ulSwitchStateID", entry["data"], "stateGroup", params)
+    _update_params("ulSwitchID", entry["data"], "switch", params)
+    _update_params("ulSwitchGroupID", entry["data"], "switchGroup", params)
 
-    _update_params("RTPCID", entry.data, "gameParameter", params)
-    _update_params("ulStateID", entry.data, "state", params)
-    _update_params("ulSwitchStateID", entry.data, "stateGroup", params)
-    _update_params("ulSwitchID", entry.data, "switch", params)
-    _update_params("ulSwitchGroupID", entry.data, "switchGroup", params)
-
-    if entry.name == "CAkAuxBus":
+    if entry["name"] == "CAkAuxBus":
         _update_params("ulID", entry, "bus", params)
 
-    _find_sounds_children(sounds, entry.children, params, stack)
+    for child in entry["direct_children"]:
+        _find_sounds_in_entry(sounds, child, params, stack)
+
+    for child in entry["children"]:
+        _find_sounds(str(child), params, stack, sounds)
 
 
 def _update_params(data_id: str, data: dict, param_name: str, params: dict):
@@ -287,6 +243,8 @@ def _update_params(data_id: str, data: dict, param_name: str, params: dict):
 
     if param_name not in params:
         params[param_name] = []
+    else:
+        params[param_name] = [*params[param_name]]
 
     param_values = params[param_name]
 
@@ -299,21 +257,6 @@ def _update_params(data_id: str, data: dict, param_name: str, params: dict):
 
         if value not in param_values:
             param_values.append(value)
-
-
-def _find_sounds_children(sounds: list, children: list[int], params: dict, stack: set):
-    for child in children:
-        if child in stack:
-            # Loop detected
-            continue
-
-        try:
-            sounds.extend(_find_sounds(child, params, stack))
-        except RecursionError:
-            # tqdm.write might cause stack error
-            print(f"\nRecursionError while scanning {child}, stack: {list(stack)}")
-
-    return sounds
 
 
 def _sound_entry(
@@ -336,5 +279,39 @@ def _sound_entry(
 
     if data:
         entry.update(data)
+
+    return entry
+
+
+def _merge_sound_entry(entry0: dict, entry1: dict, entry_id: str = None):
+    entry = {**entry0, **entry1}
+    entry_id = entry_id or entry["hash"]
+
+    for key, value in entry0.items():
+        if key not in entry1:
+            continue
+
+        new_value = entry1[key]
+
+        if isinstance(value, list):
+            if not isinstance(new_value, list):
+                raise ValueError(
+                    f"Entry {entry_id} has mismatched types for key {key} while merging"
+                )
+
+            value.extend([v for v in new_value if v not in value])
+
+        elif isinstance(value, dict):
+            if not isinstance(new_value, dict):
+                raise ValueError(
+                    f"Entry {entry_id} has mismatched types for key {key} while merging"
+                )
+
+            entry[key] = _merge_sound_entry(value, new_value, entry_id)
+
+        elif value != new_value:
+            raise ValueError(
+                f"Entry {entry_id} has different values for key {key} while merging"
+            )
 
     return entry

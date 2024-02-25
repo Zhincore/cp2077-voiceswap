@@ -69,8 +69,6 @@ async def map_sfx(args: Namespace):
         banks,
         args.metadata_path,
         args.output,
-        args.keep_empty,
-        args.sound_list_format,
         args.minify,
     )
 

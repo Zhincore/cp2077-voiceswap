@@ -43,18 +43,6 @@ map_sfx.add_argument(
     nargs=argparse.OPTIONAL,
 )
 map_sfx.add_argument(
-    "--keep-empty",
-    default=True,
-    action=argparse.BooleanOptionalAction,
-    help="Whether to keep empty events in the map (yes by default).",
-)
-map_sfx.add_argument(
-    "--sound-list-format",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="Whether to map sound hashes to info instead of events to their sound (no by default).",
-)
-map_sfx.add_argument(
     "--minify",
     default=False,
     action=argparse.BooleanOptionalAction,
