@@ -43,15 +43,14 @@ _g_queue = None
 _UPDATE_DELAY = 0.005
 
 _CHILD_FIELDS = {
-    # Thank you https://www.nexusmods.com/cyberpunk2077/mods/11075
     "CAkEvent": "ulActionID",
     "CAkActionSetSwitch": "idExt",
     "CAkActionSetAkProp": "idExt",
     "CAkActionPlay": "idExt",
     # "CAkActionBreak": "idExt",
     # "CAkActionSeek": "idExt",
-    # "CAkLayerCntr": "ulChildID",  # children is pLayers
-    # "CAkSwitchCntr": "ulChildID",  # children is SwitchList
+    "CAkLayerCntr": "ulChildID",  # children is pLayers
+    "CAkSwitchCntr": "ulChildID",  # children is SwitchList
     "CAkRanSeqCntr": "ulChildID",
     "CAkActorMixer": "ulChildID",
     "CAkMusicSwitchCntr": "ulChildID",
@@ -78,6 +77,7 @@ _ALLOWED_LISTS = {
 }
 # Fields we might need
 _DATA_FILEDS = (
+    "uInMemoryMediaSize",
     "RTPCID",
     "ulSwitchID",
     "ulSwitchGroupID",
@@ -113,7 +113,7 @@ class BankObject:
             "ulID": self.ulID,
             "children": list(self.children),
             "direct_children": list(c.as_dict() for c in self.direct_children),
-            "data": self.data,
+            "data": {k: list(v) for k, v in self.data.items()},
         }
 
 

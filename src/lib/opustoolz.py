@@ -31,7 +31,9 @@ async def export_info(opusinfo_path: str, output_path: str):
     tqdm.write("Opusinfo exported!")
 
 
-async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
+async def extract_sfx(
+    opusinfo_path: str, hashes: list[int], output_dir: str, to_wav=True
+):
     """Extracts sfx of given hashes from the given opusinfo and opuspaks."""
 
     tqdm.write("Reading SFX containers...")
@@ -75,19 +77,20 @@ async def extract_sfx(opusinfo_path: str, hashes: list[int], output_dir: str):
     if result != 0:
         raise SubprocessException("Exporting SFX failed with exit code " + str(result))
 
-    parallel = Parallel("Converting SFX to wavs")
+    if to_wav:
+        parallel = Parallel("Converting SFX to wavs")
 
-    async def convert(file: str):
-        await ffmpeg.to_wav(
-            os.path.join(output_dir, file),
-            os.path.join(output_dir, file.replace(".opus", ".wav")),
-        )
-        os.unlink(os.path.join(output_dir, file))
+        async def convert(file: str):
+            await ffmpeg.to_wav(
+                os.path.join(output_dir, file),
+                os.path.join(output_dir, file.replace(".opus", ".wav")),
+            )
+            os.unlink(os.path.join(output_dir, file))
 
-    for file in find_files(output_dir, ".opus"):
-        parallel.run(convert, file)
+        for file in find_files(output_dir, ".opus"):
+            parallel.run(convert, file)
 
-    await parallel.wait()
+        await parallel.wait()
 
     tqdm.write("SFX exported!")
 

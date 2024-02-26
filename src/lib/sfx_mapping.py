@@ -1,9 +1,16 @@
-import asyncio
-import concurrent.futures
 import json
 import os
+from enum import Enum
 
 from tqdm import tqdm
+
+
+class SoundLocation(Enum):
+    VIRTUAL = "virtual"
+    PAK = "opuspak"
+    BNK = "bnk"
+    WEM = "wem"
+
 
 __g_bnk_entries = {}
 __g_opusinfo = {}
@@ -33,7 +40,7 @@ def select_sfx(map_path: str, gender: str):
     return files
 
 
-async def build_sfx_event_index(
+def build_sfx_event_index(
     banks: dict,
     metadata_path: str,
     output_path: str,
@@ -63,7 +70,7 @@ async def build_sfx_event_index(
                 index_in_pak = 0
 
             opusinfo[opus_hash] = {
-                "pak_index": f"sfx_container_{pak_index}.opuspak",
+                "pak": f"sfx_container_{pak_index}.opuspak",
                 "indexInPak": index_in_pak,
                 "opusOffset": data["OpusOffsets"][index],
                 "riffOpusOffset": data["RiffOpusOffsets"][index],
@@ -85,20 +92,18 @@ async def build_sfx_event_index(
             if isinstance(value, list):
                 eventmetadata[key] = {item["wwiseId"]: item for item in value}
 
-    tqdm.write("Creating an SFX map...")
     index = {}
 
-    try:
-        index = await _create_index(eventmetadata, banks, opusinfo)
-    finally:
-        tqdm.write("Writing sfx index...")
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(
-                index,
-                f,
-                indent=None if minified else 4,
-                separators=(",", ":") if minified else None,
-            )
+    index = _create_index(eventmetadata, banks, opusinfo)
+
+    tqdm.write("Saving SFX map...")
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(
+            index,
+            f,
+            indent=None if minified else 4,
+            separators=(",", ":") if minified else None,
+        )
 
 
 def _load_data(
@@ -110,46 +115,42 @@ def _load_data(
     __g_eventsmetadata = shared_eventsmetadata
 
 
-async def _create_index(
+def _create_index(
     eventmetadata: dict,
     bnk_entries: dict,
     opusinfo: dict,
 ):
+    _load_data(bnk_entries, opusinfo, eventmetadata)  # TODO: Remove globals?
     index = {}
 
     event_list = list(eventmetadata["events"].values())
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ProcessPoolExecutor(
-        initializer=_load_data,
-        initargs=(bnk_entries, opusinfo, eventmetadata),
-    ) as pool:
-        found = tqdm(bar_format="Found {n_fmt} sounds", miniters=1)
-        pbar = tqdm(
-            total=len(event_list), desc="Scanning events", unit="event", leave=False
-        )
+    not_found_events = []
 
-        async def do_task(event):
-            sounds = await loop.run_in_executor(
-                pool, _find_sounds, str(event["wwiseId"])
-            )
+    found = tqdm(bar_format="Found {n_fmt} sounds", miniters=1)
 
-            new_sounds = 0
-            for sound_hash, sound in sounds.items():
-                sound["events"] = [event["redId"]["$value"]]
-                sound["tags"] = [tag["$value"] for tag in event["tags"]]
+    for event in tqdm(event_list, desc="Scanning events", unit="event", leave=False):
+        event_name = event["redId"]["$value"]
+        sounds = _find_sounds(str(event["wwiseId"]))
 
-                if sound_hash in index:
-                    index[sound_hash] = _merge_sound_entry(index[sound_hash], sound)
-                else:
-                    index[sound_hash] = sound
-                    new_sounds += 1
-            found.update(new_sounds)
-            pbar.update(1)
+        if len(sounds) == 0:
+            not_found_events.append(event_name)
 
-        await asyncio.gather(*(do_task(event) for event in reversed(event_list)))
-        pbar.close()
-        found.close()
-        tqdm.write("Cleaning up...")
+        new_sounds = 0
+        for sound_hash, sound in sounds.items():
+            sound["events"] = [event_name]
+            sound["tags"] = [tag["$value"] for tag in event["tags"]]
+
+            if sound_hash in index:
+                index[sound_hash] = _merge_sound_entry(index[sound_hash], sound)
+            else:
+                index[sound_hash] = sound
+                new_sounds += 1
+        found.update(new_sounds)
+
+    found.close()
+
+    if len(not_found_events) > 0:
+        tqdm.write(f"Warning: No sounds found for {len(not_found_events)} events")
 
     # Sort the index
     return dict(sorted(index.items(), key=lambda a: a[0]))
@@ -158,9 +159,7 @@ async def _create_index(
 def _find_sounds(
     entry_id: str, params: dict = None, stack: set = None, sounds: dict = None
 ):
-    if (
-        stack and (len(stack) > 64 or entry_id in stack)
-    ) or entry_id not in __g_bnk_entries:
+    if (stack and entry_id in stack) or entry_id not in __g_bnk_entries:
         return {}
 
     entries = __g_bnk_entries[entry_id]
@@ -201,41 +200,7 @@ def _find_sounds_in_entry(
 
     # Our goal  # NOTE: casing issue in wwiser
     if "sourceID" in entry["data"] or "sourceId" in entry["data"]:
-        is_music = entry["name"] == "CAkMusicTrack"
-        for child in entry["children"]:
-            sound = {}
-
-            # Find where is it embedded
-            embedded = False
-            has_children = False
-            if child in __g_bnk_entries:
-                embedded_in = []
-                for sub_child in __g_bnk_entries[child]:
-                    if "bank" in sub_child["data"]:
-                        embedded_in.append(sub_child["data"]["bank"])
-                    elif "sourceId" in sub_child["data"]:
-                        has_children = True
-                        break
-
-                if len(embedded_in) > 0:
-                    sound["embeddedIn"] = embedded_in
-                    embedded = True
-
-            if has_children:
-                continue
-
-            # Find data in opusinfo
-            in_pak = False
-            child_hash = int(child)
-            if child_hash in __g_opusinfo:
-                sound.update(__g_opusinfo[child_hash])
-                in_pak = True
-
-            sound_entry = _sound_entry(child, in_pak, is_music, embedded, params, sound)
-            if child in sounds:
-                sounds[child] = _merge_sound_entry(sounds[child], sound_entry)
-            else:
-                sounds[child] = sound_entry
+        _save_sound(sounds, entry, params)
 
     for child in entry["direct_children"]:
         _find_sounds_in_entry(sounds, child, params, stack)
@@ -266,28 +231,64 @@ def _update_params(data_id: str, data: dict, param_name: str, params: dict):
             param_values.append(value)
 
 
-def _sound_entry(
-    sound_hash: int,
-    in_pak: bool,
-    is_music: bool,
-    is_embedded: bool,
-    params: dict = None,
-    data: dict = None,
-):
-    entry = {
-        "hash": sound_hash,
-        "inPak": in_pak,
-        "isMusic": is_music,
-        "isEmbedded": is_embedded,
-    }
+def _save_sound(sounds: dict, entry: dict, params: dict):
+    is_music = entry["name"] == "CAkMusicTrack"
 
-    if params:
-        entry.update(params)
+    location = SoundLocation.WEM
 
-    if data:
-        entry.update(data)
+    # Detect 0 size files
+    if (
+        "uInMemoryMediaSize" in entry["data"]
+        and entry["data"]["uInMemoryMediaSize"][0] == "0"
+    ):
+        location = SoundLocation.VIRTUAL
 
-    return entry
+    for source_id in entry["children"]:
+        source_id_int = int(source_id)
+
+        sound = {
+            "hash": source_id_int,
+            "location": location.value,
+            "isMusic": is_music,
+        }
+
+        # Find if is it embedded and where
+        if source_id in __g_bnk_entries:
+            has_children = False
+            embedded_in = []
+
+            for sub_child in __g_bnk_entries[source_id]:
+                if "bank" in sub_child["data"]:
+                    embedded_in.append(sub_child["data"]["bank"])
+                elif "sourceId" in sub_child["data"]:
+                    has_children = True
+                    break
+
+            # Don't save the entry if it has children
+            if has_children:
+                continue
+
+            if len(embedded_in) > 0:
+                embedded_in.sort()
+                sound["embeddedIn"] = embedded_in
+                sound["location"] = SoundLocation.BNK.value
+
+        # Find data in opusinfo
+        if source_id_int in __g_opusinfo:
+            sound.update(__g_opusinfo[source_id_int])
+            sound["location"] = SoundLocation.PAK.value
+
+        # Add sorted params
+        for key, value in params.items():
+            if len(value) > 0:
+                value.sort()
+                sound[key] = value
+
+        # Save findings
+        if source_id in sounds:
+            sounds[source_id] = _merge_sound_entry(sounds[source_id], sound)
+        else:
+            sounds[source_id] = sound
 
 
 def _merge_sound_entry(entry0: dict, entry1: dict, entry_id: str = None):
@@ -306,7 +307,7 @@ def _merge_sound_entry(entry0: dict, entry1: dict, entry_id: str = None):
                     f"Entry {entry_id} has mismatched types for key {key} while merging"
                 )
 
-            value.extend([v for v in new_value if v not in value])
+            entry[key] = [*value, *(v for v in new_value if v not in value)]
 
         elif isinstance(value, dict):
             if not isinstance(new_value, dict):

@@ -29,27 +29,31 @@ load_dotenv(".env")
 async def sfx_metadata(args: Namespace):
     """Extracts SFX metadata from the game."""
 
-    parallel = util.Parallel("Extracting SFX metadata", unit="tasks", total=4)
+    pbar = tqdm("Extracting SFX metadata", unit="tasks", total=4)
 
+    # events metadata
     async def eventsmetadata():
         await wolvenkit.uncook_json("eventsmetadata\\.json", args.output, log=False)
-        parallel.finished()
+        pbar.update(1)
 
-    async def bnk_opusinfo():
-        await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output, log=False)
-        parallel.finished()
+    events_task = asyncio.create_task(eventsmetadata())
 
-    parallel.run(wwiser.export_banks, args.output, args.output)
+    # bnks
+    await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output, log=False)
+    pbar.update(1)
 
-    parallel.run(
-        opustoolz.export_info,
-        os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
-        os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
-    )
+    async def bnks():
+        await wwiser.export_banks(args.output, args.output)
+        pbar.update(1)
 
-    parallel.prepare()
-    await bnk_opusinfo()
-    await asyncio.gather(parallel.wait(), eventsmetadata())
+    async def opusinfo():
+        await opustoolz.export_info(
+            os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
+            os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
+        )
+        pbar.update(1)
+
+    await asyncio.gather(bnks(), opusinfo(), events_task)
 
 
 async def map_sfx(args: Namespace):
@@ -65,7 +69,7 @@ async def map_sfx(args: Namespace):
     except (IOError, ValueError):
         banks = await wwiser.parse_banks(args.metadata_path, banks_cache)
 
-    await sfx_mapping.build_sfx_event_index(
+    sfx_mapping.build_sfx_event_index(
         banks,
         args.metadata_path,
         args.output,
@@ -96,33 +100,50 @@ async def extract_all_sfx(args: Namespace):
         sfx_map = json.load(f)
 
     pak_hashes = set()
-    other_hashes = set()
+    wem_hashes = set()
+    bnks = set()
+    extractable = []
 
-    for event in tqdm(sfx_map.values(), desc="Preparing extraction", unit="event"):
-        for sound in event["sounds"]:
-            if sound["inPak"]:
-                pak_hashes.add(str(sound["hash"]))
-            else:
-                other_hashes.add(str(sound["hash"]))
+    for sound_hash, sound in tqdm(
+        sfx_map.items(), desc="Scanning SFX map", unit="sound"
+    ):
+        match sound["location"]:
+            case "opuspak":
+                pak_hashes.add(sound_hash)
+            case "bnk":
+                bnks.update(sound["embeddedIn"])
+            case "wem":
+                wem_hashes.add(sound_hash)
+            case "virtual":
+                continue  # skip the bellow
+        extractable.append(sound_hash)
+    extractable = set(extractable)
 
-    out_path = os.path.join(args.sfx_cache_path, "base\\sound\\soundbanks")
-    os.makedirs(out_path, exist_ok=True)
+    os.makedirs(args.output, exist_ok=True)
 
     # Run SFX in background
     sfx_task = asyncio.create_task(
         _extract_sfx(list(pak_hashes), args.sfx_cache_path, args.output)
     )
 
-    # Run in other thread to keep the above task running
+    # Run BNK in background
     export_bnks = util.Parallel("Extracting embedded SFX")
-    for file in util.find_files(args.metadata_path, ".bnk"):
+
+    async def try_export_embedded(*args):
+        try:
+            await vgmstream.export_embedded(*args)
+        except util.SubprocessException:
+            pass
+
+    for bnk in bnks:
         export_bnks.run(
-            vgmstream.export_embedded,
-            os.path.join(args.metadata_path, file),
-            out_path,
+            try_export_embedded,
+            os.path.join(args.metadata_path, bnk),
+            args.output,
         )
     embedded_task = asyncio.create_task(export_bnks.wait())
 
+    # Export wems in foreground
     await wolvenkit.extract_files(
         "base\\\\sound\\\\soundbanks\\\\.*\\.wem",
         args.sfx_cache_path,
@@ -130,7 +151,7 @@ async def extract_all_sfx(args: Namespace):
     )
 
     not_found = 0
-    for sound in tqdm(other_hashes, desc="Converting wem SFX"):
+    for sound in tqdm(wem_hashes, desc="Converting wem SFX"):
         input_path = os.path.join(
             args.sfx_cache_path, f"base\\sound\\soundbanks\\{sound}.wem"
         )
@@ -145,13 +166,42 @@ async def extract_all_sfx(args: Namespace):
             tqdm.write(f"Sound {sound} not found.")
             not_found += 1
 
-    total_other = len(other_hashes)
     tqdm.write(
-        f"Finished extracting wem SFX, {not_found}/{total_other} were not found or failed."
+        f"Finished extracting wem SFX, {not_found}/{len(wem_hashes)} were not found or failed."
     )
 
     tqdm.write("Waiting for threads to finish...")
     await asyncio.gather(embedded_task, sfx_task)
+
+    tqdm.write("Checking results...")
+    extra_sounds = []
+    not_found_sounds = set(extractable)
+    for file in os.listdir(args.output):
+        basename, ext = file.split(".", 1)
+        sound = basename.split(" ")[0]
+
+        if sound in not_found_sounds:
+            not_found_sounds.remove(sound)
+        elif sound in extractable:
+            tqdm.write(f"Found a duplicate for {sound}")
+        else:
+            extra_sounds.append(sound)
+
+        normalized_name = sound + "." + ext
+        if file != normalized_name:
+            os.replace(
+                os.path.join(args.output, file),
+                os.path.join(args.output, normalized_name),
+            )
+
+    if len(not_found_sounds) > 0:
+        tqdm.write(
+            f"Not found {len(not_found_sounds)} sounds: " + ", ".join(not_found_sounds)
+        )
+    if len(extra_sounds) > 0:
+        tqdm.write(
+            f"Found {len(extra_sounds)} unmapped sounds: " + ", ".join(extra_sounds)
+        )
 
     tqdm.write("Done.")
 
@@ -171,6 +221,7 @@ async def _extract_sfx(hashes: list, cache_path: str, output: str, paks: list = 
         os.path.join(cache_path, "base/sound/soundbanks/sfx_container.opusinfo"),
         hashes,
         output,
+        paks is not None,
     )
 
 
