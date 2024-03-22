@@ -51,13 +51,13 @@ map_sfx.add_argument(
 
 # Extract subtitles
 extract_subtitles = subcommands.add_parser(
-    "extract_subtitles", help="Extract subttiles and their audio file names."
+    "extract_subtitles", help="Extract subtiles and their audio file names."
 )
 extract_subtitles.add_argument(
     "locale",
     type=str,
     help="What locale of subtitles to extract.",
-    default="cz-cz",
+    default="en-us",
     nargs=argparse.OPTIONAL,
 )
 extract_subtitles.add_argument(
@@ -67,7 +67,6 @@ extract_subtitles.add_argument(
     default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
 )
-
 
 # Extract all SFX
 extract_all_sfx = subcommands.add_parser(
@@ -211,14 +210,6 @@ map_subtitles = subcommands.add_parser(
     "map_subtitles", help="Exports mapping of voiceover ids to subtitles."
 )
 map_subtitles.add_argument(
-    "gender",
-    type=lambda a: {"f": "female", "m": "male"}.get(a, a),
-    choices=["male", "female", "f", "m"],
-    help="Which gender of V to process (male or female).",
-    nargs=argparse.OPTIONAL,
-    default="female",
-)
-map_subtitles.add_argument(
     "locale",
     type=str,
     help="What locale of subtitles to use.",
@@ -232,17 +223,17 @@ map_subtitles.add_argument(
     nargs=argparse.OPTIONAL,
 )
 map_subtitles.add_argument(
-    "--pattern",
-    type=str,
-    help="The file name regex pattern to match against.",
-    nargs=argparse.OPTIONAL,
-)
-map_subtitles.add_argument(
     "--subtitles-path",
     type=str,
     help="Path where subtitle files were extracted.",
     default=config.METADATA_EXTRACT_PATH,
     nargs=argparse.OPTIONAL,
+)
+map_subtitles.add_argument(
+    "--minify",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to output the json in minifed way (without formatting) (no by default).",
 )
 
 

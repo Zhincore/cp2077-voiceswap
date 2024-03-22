@@ -1,20 +1,17 @@
 import json
 import os
 import re
+from multiprocessing import Pool
 
 from tqdm import tqdm
 
-from multiprocessing import Pool
 from util import find_files
 
-GENDERS = ["male", "female"]
+GENDERS = ["female", "male"]
 
 
-def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "female"):
+def map_subtitles(path: str, locale: str):
     """Map subtitles to their audio file that matches the pattern."""
-
-    regex = re.compile("\\\\" + pattern) if pattern else None
-    other_gender = GENDERS[(GENDERS.index(gender) + 1) % len(GENDERS)]
 
     map_paths = [*find_files(path, subfolder="en-us")]
     sub_paths = [*find_files(path, ".json.json", locale)]
@@ -32,35 +29,15 @@ def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "fe
     #             if not os.path.exists(os.path.join(path, depot_path)):
     #                 tqdm.write(f"Warning: Cannot find '{depot_path}'")
 
-    wanted_ids = {}
-
-    for file in tqdm(map_paths, desc="Scanning voiceover maps", unit="file"):
-        if not os.path.basename(file).startswith("voiceovermap") or not file.endswith(
-            ".json.json"
-        ):
-            continue
-
-        with open(os.path.join(path, file), "r", encoding="utf-8") as f:
-            data = json.load(f)
-            entries = data["Data"]["RootChunk"]["root"]["Data"]["entries"]
-
-            for entry in entries:
-                for res_path in ("femaleResPath", "maleResPath"):
-                    dep_path = entry[res_path]["DepotPath"]["$value"]
-                    if not regex or regex.search(dep_path):
-                        if entry["stringId"] not in wanted_ids:
-                            wanted_ids[entry["stringId"]] = set()
-                        wanted_ids[entry["stringId"]].add(dep_path)
-
     vo_map = {}
     for file in tqdm(
         sub_paths,
         desc="Scanning subtitle files",
         unit="file",
     ):
-        if os.path.basename(file).startswith("voiceovermap") or file.endswith(
-            "subtitles.json.json"
-        ):
+        if os.path.basename(file).startswith(
+            ("voiceovermap", "subtitles")
+        ) or not file.endswith(".json.json"):
             continue
 
         with open(os.path.join(path, file), "r", encoding="utf-8") as f:
@@ -68,15 +45,71 @@ def map_subtitles(path: str, locale: str, pattern: str = None, gender: str = "fe
             entries = data["Data"]["RootChunk"]["root"]["Data"]["entries"]
 
             for entry in entries:
-                text = entry[gender + "Variant"] or entry[other_gender + "Variant"]
+                item = {}
 
-                if text != "" and entry["stringId"] in wanted_ids:
-                    voiceovers = wanted_ids[entry["stringId"]]
+                for gender in GENDERS:
+                    text = entry[gender + "Variant"]
 
-                    for voiceover in voiceovers:
-                        vo_map[voiceover] = text
+                    if text and text != "":
+                        item[gender] = {
+                            "text": text,
+                            "voiceovers": {},
+                            "path": file.replace(".json.json", ""),
+                        }
 
-    tqdm.write(f"Found {len(vo_map)} subtitle entries.")
+                if len(item) > 0:
+                    vo_map[entry["stringId"]] = item
+
+    found_files = set()
+    not_found_subtitles = set()
+
+    for file in tqdm(map_paths, desc="Searching for mappings", unit="file"):
+        filename = os.path.basename(file)
+        if not filename.startswith("voiceovermap") or not filename.endswith(
+            ".json.json"
+        ):
+            continue
+
+        effect_type = filename.split(".", 2)[0].split("_")[-1]
+        if effect_type in ("1", "voiceovermap"):
+            effect_type = "normal"
+
+        with open(os.path.join(path, file), "r", encoding="utf-8") as f:
+            data = json.load(f)
+            entries = data["Data"]["RootChunk"]["root"]["Data"]["entries"]
+
+            for entry in entries:
+                if entry["stringId"] not in vo_map:
+                    not_found_subtitles.add(entry["stringId"])
+                    # Create item without text
+                    vo_map[entry["stringId"]] = {}
+                    for gender in GENDERS:
+                        vo_map[entry["stringId"]][gender] = {
+                            "text": None,
+                            "voiceovers": {},
+                        }
+
+                item = vo_map[entry["stringId"]]
+                found_files.add(entry["stringId"])
+                prev_depot = None
+
+                for gender, subitem in item.items():
+                    dep_path = entry[gender + "ResPath"]["DepotPath"]["$value"]
+
+                    if prev_depot and dep_path == prev_depot:
+                        # Remove non-gendered stuff
+                        del item[gender]
+                        continue
+
+                    subitem["voiceovers"][effect_type] = dep_path
+
+    tqdm.write(f"Found {len(found_files)} subtitle mappings.")
+    missing_vo = len(vo_map) - len(found_files)
+    if missing_vo > 0:
+        tqdm.write(f"Warning: Not found voiceovers for {missing_vo} subtitles!")
+    missing_sub = len(not_found_subtitles)
+    if missing_sub > 0:
+        tqdm.write(f"Warning: Not found subtitles for {missing_sub} voiceovers!")
 
     return vo_map
 

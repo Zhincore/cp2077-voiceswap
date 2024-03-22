@@ -13,7 +13,7 @@ param (
 
 $libs = @{
     "OpusToolZ"     = "https://github.com/Zhincore/OpusToolZ/releases/download/v3.1/OpusToolZ.zip"
-    "WolvenKit"     = "https://github.com/WolvenKit/WolvenKit/releases/download/8.12.2/WolvenKit.Console-8.12.2.zip"
+    "WolvenKit"     = "https://github.com/WolvenKit/WolvenKit/releases/download/8.13.0/WolvenKit.Console-8.13.0.zip"
     "vgmstream"     = "https://github.com/vgmstream/vgmstream-releases/releases/download/nightly/vgmstream-win64.zip"
     "wwiser"        = "https://github.com/bnnm/wwiser/archive/refs/heads/master.zip"
 }

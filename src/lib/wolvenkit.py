@@ -51,7 +51,7 @@ async def uncook_json(pattern: str, output_path: str, log=True):
         "WolvenKit",
         WOLVENKIT_EXE,
         "uncook",
-        *_get_nonmod_folders(),
+        *("-gp", os.getenv("CYBERPUNK_PATH")),
         "-s",
         "-u",
         *("-r", pattern),

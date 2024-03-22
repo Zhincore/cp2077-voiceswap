@@ -258,24 +258,28 @@ async def isolate_vocals(args: Namespace):
 
 async def export_subtitle_map(args: Namespace):
     """Exports voiceover map"""
-    vo_map = tts.map_subtitles(
-        args.subtitles_path, args.locale, args.pattern, args.gender
-    )
+    vo_map = tts.map_subtitles(args.subtitles_path, args.locale)
     # sort
     vo_map = dict(sorted(vo_map.items()))
 
     output = args.output or os.path.join(config.METADATA_PATH, "subtitles.json")
 
     with open(output, mode="w", encoding="utf-8") as f:
-        json.dump(vo_map, f, indent=4, ensure_ascii=False)
+        json.dump(
+            vo_map,
+            f,
+            indent=None if args.minify else 4,
+            separators=(",", ":") if args.minify else None,
+        )
         tqdm.write(f"Wrote {output}!")
 
 
 async def do_tts(args: Namespace):
     """Converts subtitles to speech."""
 
+    raise NotImplementedError("TODO: subtitle map format has changed")
     vo_map = tts.map_subtitles(
-        args.subtitles_path, args.locale, args.pattern, args.gender
+        args.subtitles_path, args.locale  # , args.pattern, args.gender
     )
 
     is_ref_dir = os.path.isdir(args.reference)
