@@ -42,18 +42,16 @@ async def sfx_metadata(args: Namespace):
     await wolvenkit.extract_files(".*\\.(bnk|opusinfo)", args.output, log=False)
     pbar.update(1)
 
-    async def bnks():
-        await wwiser.export_banks(args.output, args.output)
-        pbar.update(1)
+    await opustoolz.export_info(
+        os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
+        os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
+    )
+    pbar.update(1)
 
-    async def opusinfo():
-        await opustoolz.export_info(
-            os.path.join(args.output, "base/sound/soundbanks/sfx_container.opusinfo"),
-            os.path.join(args.output, "extracted/sfx_container.opusinfo.json"),
-        )
-        pbar.update(1)
+    await wwiser.export_banks(args.output, args.output)
+    pbar.update(1)
 
-    await asyncio.gather(bnks(), opusinfo(), events_task)
+    await events_task
 
 
 async def map_sfx(args: Namespace):
