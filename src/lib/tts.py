@@ -15,6 +15,7 @@ def map_subtitles(path: str, locale: str):
 
     map_paths = [*find_files(path, subfolder="en-us")]
     sub_paths = [*find_files(path, ".json.json", locale)]
+    skip_path = f"localization/{locale}"  # this will be replaced with {} in paths
 
     # Make sure we have all files # Spoiler alert: We don't
     # subtitle_lists = [*find_files(path, "subtitles.json.json", locale)]
@@ -51,13 +52,14 @@ def map_subtitles(path: str, locale: str):
                     text = entry[gender + "Variant"]
 
                     if text and text != "":
-                        item[gender] = {
-                            "text": text,
-                            "voiceovers": {},
-                            "path": file.replace(".json.json", ""),
-                        }
+                        item[gender] = {"text": text}
 
                 if len(item) > 0:
+                    item["_path"] = (
+                        file.replace(".json.json", "")
+                        .replace("\\", "/")
+                        .replace(skip_path, "{}")
+                    )
                     vo_map[entry["stringId"]] = item
 
     found_files = set()
@@ -72,7 +74,7 @@ def map_subtitles(path: str, locale: str):
 
         effect_type = filename.split(".", 2)[0].split("_")[-1]
         if effect_type in ("1", "voiceovermap"):
-            effect_type = "normal"
+            effect_type = "main"
 
         with open(os.path.join(path, file), "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -85,8 +87,7 @@ def map_subtitles(path: str, locale: str):
                     vo_map[entry["stringId"]] = {}
                     for gender in GENDERS:
                         vo_map[entry["stringId"]][gender] = {
-                            "text": None,
-                            "voiceovers": {},
+                            "vo": {},
                         }
 
                 item = vo_map[entry["stringId"]]
@@ -94,6 +95,9 @@ def map_subtitles(path: str, locale: str):
                 prev_depot = None
 
                 for gender, subitem in item.items():
+                    if gender.startswith("_"):
+                        continue
+
                     dep_path = entry[gender + "ResPath"]["DepotPath"]["$value"]
 
                     if prev_depot and dep_path == prev_depot:
@@ -101,7 +105,12 @@ def map_subtitles(path: str, locale: str):
                         del item[gender]
                         continue
 
-                    subitem["voiceovers"][effect_type] = dep_path
+                    if "vo" not in subitem:
+                        subitem["vo"] = {}
+
+                    subitem["vo"][effect_type] = dep_path.replace("\\", "/").replace(
+                        skip_path, "{}"
+                    )
 
     tqdm.write(f"Found {len(found_files)} subtitle mappings.")
     missing_vo = len(vo_map) - len(found_files)
