@@ -110,7 +110,7 @@ def map_subtitles(path: str, locale: str):
                     if prev_depot and dep_path == prev_depot:
                         # Remove non-gendered stuff
                         del item[gender]
-                        continue
+                        break
 
                     prev_depot = dep_path
 
