@@ -81,7 +81,7 @@ async def extract_subtitles(args: Namespace):
     await wolvenkit.uncook_json(
         "|".join(
             (
-                "localization\\\\en-us\\\\voiceovermap.*\\.json",
+                f"localization\\\\({args.locale}|en-us|common)\\\\voiceovermap.*\\.json",
                 f"localization\\\\{args.locale}\\\\subtitles\\\\.*\\.json",
             ),
         ),

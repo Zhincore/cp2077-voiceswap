@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from itertools import chain
 from multiprocessing import Pool
 
 from tqdm import tqdm
@@ -13,7 +14,13 @@ GENDERS = ["female", "male"]
 def map_subtitles(path: str, locale: str):
     """Map subtitles to their audio file that matches the pattern."""
 
-    map_paths = [*find_files(path, subfolder="en-us")]
+    map_paths = [
+        *chain(
+            find_files(path, subfolder=locale),
+            find_files(path, subfolder="en-us"),
+            find_files(path, subfolder="common"),
+        )
+    ]
     sub_paths = [*find_files(path, ".json.json", locale)]
     skip_path = f"localization/{locale}"  # this will be replaced with {} in paths
 
@@ -104,6 +111,8 @@ def map_subtitles(path: str, locale: str):
                         # Remove non-gendered stuff
                         del item[gender]
                         continue
+
+                    prev_depot = dep_path
 
                     if "vo" not in subitem:
                         subitem["vo"] = {}
