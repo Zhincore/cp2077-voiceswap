@@ -35,23 +35,26 @@ async def _get_rvc_executable():
 
 async def uvr(
     input_path: str,
-    output_vocals_path: str,
-    output_rest_path: str,
+    output_path: str,
     overwrite: bool = True,
+    batchsize=1,
+    model="HP5_only_main_vocal",  # onnx_dereverb_By_FoxJoy
+    title="Isolating vocals",
 ):
     """Splits audio files to vocals and the rest."""
 
     cwd = os.getcwd()
 
-    parallel = Parallel("Isolating vocals")
+    parallel = Parallel(title)
 
     uvr_process = await spawn(
         "RVC's venv python",
         await _get_rvc_executable(),
         os.path.join(cwd, "libs/rvc_uvr.py"),
+        model,
         os.path.join(cwd, config.TMP_PATH),
-        os.path.join(cwd, output_vocals_path),
-        os.path.join(cwd, output_rest_path),
+        os.path.join(cwd, output_path),
+        str(batchsize),
         cwd=os.getenv("RVC_PATH"),
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
@@ -61,6 +64,9 @@ async def uvr(
     loop = asyncio.get_event_loop()
 
     async def submit(file: str):
+        if uvr_process.returncode is not None:
+            return
+
         future = loop.create_future()
 
         def callback():
@@ -76,19 +82,24 @@ async def uvr(
     async def checker():
         while uvr_process.returncode is None:
             try:
-                line = await asyncio.wait_for(uvr_process.stdout.readline(), 5)
+                line = await asyncio.wait_for(uvr_process.stdout.readline(), 1)
                 file = line.decode().strip()
                 if file in callbacks:
                     callbacks[file]()
                 elif file != "":
                     tqdm.write(file)
             except asyncio.TimeoutError:
-                pass
+                # Wake up the process
+                uvr_process.stdin.write(("\n").encode())
+                await uvr_process.stdin.drain()
+
+        if uvr_process.returncode != 0:
+            raise SubprocessException("UVR exitted with non-zero code")
 
     dontoverwrite = {}
 
     if not overwrite:
-        for root, _dirs, files in os.walk(output_vocals_path):
+        for root, _dirs, files in os.walk(output_path):
             dontoverwrite[root] = list(files)
 
     async def process(path):
@@ -96,9 +107,10 @@ async def uvr(
 
         if not overwrite:
             basename = os.path.basename(path).split(".")[0]
-            for file in dontoverwrite[os.path.join(output_vocals_path, path_dir)]:
-                if file.startswith(basename):
-                    return
+            if os.path.join(output_path, path_dir) in dontoverwrite:
+                for file in dontoverwrite[os.path.join(output_path, path_dir)]:
+                    if file.startswith(basename):
+                        return
 
         os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
 

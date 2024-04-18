@@ -14,7 +14,6 @@ from scipy.io import wavfile
 
 logger = logging.getLogger(__name__)
 
-from functools import lru_cache
 from time import time as ttime
 
 import faiss

@@ -22,7 +22,7 @@ def find_paths_with_files(input_path: str):
 def find_files(input_path: str, ext: str = None, subfolder: str = None):
     """Find files with the given extension"""
     for root, _dirs, files in os.walk(input_path):
-        path = root[len(input_path) + 1 :]
+        path = root[len(input_path) :]
         if subfolder and subfolder not in path:
             continue
 

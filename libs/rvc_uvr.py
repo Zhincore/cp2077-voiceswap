@@ -12,39 +12,86 @@ import sys
 argv = sys.argv
 sys.argv = [argv[0]]
 
+import torch
 from functools import partialmethod
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+from queue import Queue
+
+torch.manual_seed(114514)
 
 # Disable tqdm, TQDM_DISABLE didn't work for some reason
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 from configs.config import Config
 from infer.modules.uvr5.mdxnet import MDXNetDereverb
+from infer.modules.uvr5.vr import AudioPre
+from torch.multiprocessing import Pool
+from functools import partial
+
+
+g_pre_fun = None
+
+
+def init_worker(model: str):
+    global g_pre_fun
+    config = Config()
+
+    if model == "onnx_dereverb_By_FoxJoy":
+        g_pre_fun = MDXNetDereverb(15, config.device)
+    else:  # HP5_only_main_vocal
+        g_pre_fun = AudioPre(
+            agg=15,
+            model_path=os.path.join(os.getenv("weight_uvr5_root"), model + ".pth"),
+            device=config.device,
+            is_half=config.is_half,
+        )
+
+
+def run_worker(input_file: str, output_path: str):
+    g_pre_fun._path_audio_(
+        input_file,
+        output_path,
+        output_path,
+        "wav",
+    )
 
 
 def main():
-    input_path = argv[1]
-    save_root_vocal = argv[3]  # these two are swapped intentionally
-    save_root_ins = argv[2]  # these two are swapped intentionally
+    load_dotenv(".env")
+    model = argv[1]
+    input_path = argv[2]
+    output_path = argv[3]
+    batch_size = int(argv[4]) if len(argv) > 4 else 1
 
-    config = Config()
+    def callback(file: str, _res):
+        print(file)
 
-    pre_fun = MDXNetDereverb(15, config.device)
+    with Pool(batch_size, init_worker, (model,)) as pool:
+        results = Queue()
+        while True:
+            try:
+                if not results.empty():
+                    result = results.get_nowait()
+                    if result.ready():
+                        result.get()
+                    else:
+                        results.put_nowait(result)
 
-    while True:
-        try:
-            file = input()
-            path = os.path.dirname(file)
-            pre_fun._path_audio_(
-                os.path.join(input_path, file),
-                os.path.join(save_root_ins, path),
-                os.path.join(save_root_vocal, path),
-                "wav",
-            )
-            print(file)
-        except EOFError:
-            break
+                file = input()
+                if file == "":
+                    continue
+
+                res = pool.apply_async(
+                    run_worker,
+                    (os.path.join(input_path, file), output_path),
+                    callback=partial(callback, file),
+                )
+                results.put_nowait(res)
+            except EOFError:
+                break
+        pool.close()
+        pool.join()
 
 
 if __name__ == "__main__":

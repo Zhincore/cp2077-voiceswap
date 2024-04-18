@@ -251,7 +251,7 @@ async def export_wem(args: Namespace):
 
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
-    await rvc.uvr(args.input, args.output_vocals, args.output_rest, args.overwrite)
+    await rvc.uvr(args.input, args.output, args.overwrite, args.batchsize)
 
 
 async def export_subtitle_map(args: Namespace):

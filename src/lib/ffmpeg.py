@@ -40,7 +40,7 @@ async def convert(source: str, output: str, *args):
 
 
 async def to_wav(source: str, output: str, *args):
-    """Converts source to WAV fromat for RVC/game."""
+    """Converts source to WAV format for RVC/game."""
     return await convert(
         source,
         output,

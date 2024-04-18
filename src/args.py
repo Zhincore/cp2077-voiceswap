@@ -185,17 +185,10 @@ isolate_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
-    "output_vocals",
+    "output",
     type=str,
     help="Path where to output the vocals.",
     default=config.UVR_OUTPUT_VOCALS,
-    nargs=argparse.OPTIONAL,
-)
-isolate_vocals.add_argument(
-    "output_rest",
-    type=str,
-    help="Path where to output the rest.",
-    default=config.UVR_OUTPUT_REST,
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
@@ -203,6 +196,12 @@ isolate_vocals.add_argument(
     default=True,
     action=argparse.BooleanOptionalAction,
     help="Whether to overwrite old files",
+)
+isolate_vocals.add_argument(
+    "--batchsize",
+    type=int,
+    default=1,
+    help="How many files to process at once",
 )
 
 # map_subtitles
