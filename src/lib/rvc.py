@@ -61,23 +61,17 @@ async def uvr(
     )
 
     callbacks = {}
-    loop = asyncio.get_event_loop()
 
     async def submit(file: str):
         if uvr_process.returncode is not None:
             return
 
-        future = loop.create_future()
-
         def callback():
-            future.set_result(None)
             del callbacks[file]
 
         callbacks[file] = callback
         uvr_process.stdin.write((file + "\n").encode())
         await uvr_process.stdin.drain()
-
-        return await future
 
     async def checker():
         while uvr_process.returncode is None:
@@ -90,11 +84,12 @@ async def uvr(
                     tqdm.write(file)
             except asyncio.TimeoutError:
                 # Wake up the process
-                uvr_process.stdin.write(("\n").encode())
-                await uvr_process.stdin.drain()
+                if uvr_process.returncode is None:
+                    uvr_process.stdin.write(("\n").encode())
+                    await uvr_process.stdin.drain()
 
         if uvr_process.returncode != 0:
-            raise SubprocessException("UVR exitted with non-zero code")
+            raise SubprocessException("UVR exited with non-zero code")
 
     dontoverwrite = {}
 
@@ -104,14 +99,6 @@ async def uvr(
 
     async def process(path):
         path_dir = os.path.dirname(path)
-
-        if not overwrite:
-            basename = os.path.basename(path).split(".")[0]
-            if os.path.join(output_path, path_dir) in dontoverwrite:
-                for file in dontoverwrite[os.path.join(output_path, path_dir)]:
-                    if file.startswith(basename):
-                        return
-
         os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
 
         tmp_path = path.replace(".ogg", ".wav")
@@ -121,22 +108,43 @@ async def uvr(
         )
         await submit(tmp_path)
 
+    skipped = 0
+
     for path in find_files(input_path):
-        parallel.run(process, path)
+        path_dir = os.path.dirname(path)
+        is_skipped = False
+
+        if not overwrite:
+            basename = os.path.basename(path).split(".")[0]
+            if os.path.join(output_path, path_dir) in dontoverwrite:
+                for file in dontoverwrite[os.path.join(output_path, path_dir)]:
+                    if file.startswith(basename):
+                        skipped += 1
+                        is_skipped = True
+                        break
+
+        if not is_skipped:
+            parallel.run(process, path)
+
+    if not overwrite:
+        tqdm.write(f"Skipping {skipped} already done files.")
 
     async def run():
         await parallel.wait()
         uvr_process.stdin.write_eof()
         await uvr_process.stdin.drain()
 
-    await asyncio.gather(run(), checker())
+    try:
+        await asyncio.gather(run(), checker())
 
-    result = await uvr_process.wait()
-    if result != 0:
-        raise SubprocessException(f"Converting files failed with exit code {result}")
-
-    tqdm.write("Cleaning up...")
-    shutil.rmtree(config.TMP_PATH)
+        result = await uvr_process.wait()
+        if result != 0:
+            raise SubprocessException(
+                f"Converting files failed with exit code {result}"
+            )
+    finally:
+        tqdm.write("Cleaning up...")
+        shutil.rmtree(config.TMP_PATH, ignore_errors=True)
 
 
 async def batch_rvc(input_path: str, opt_path: str, overwrite: bool, **kwargs):

@@ -17,6 +17,8 @@ from functools import partialmethod
 from tqdm import tqdm
 from dotenv import load_dotenv
 from queue import Queue
+import warnings
+warnings.filterwarnings("ignore")
 
 torch.manual_seed(114514)
 
@@ -27,6 +29,7 @@ from configs.config import Config
 from infer.modules.uvr5.mdxnet import MDXNetDereverb
 from infer.modules.uvr5.vr import AudioPre
 from torch.multiprocessing import Pool
+from librosa.util.exceptions import ParameterError
 from functools import partial
 
 
@@ -48,13 +51,19 @@ def init_worker(model: str):
         )
 
 
-def run_worker(input_file: str, output_path: str):
-    g_pre_fun._path_audio_(
-        input_file,
-        output_path,
-        output_path,
-        "wav",
-    )
+def run_worker(input_file: str, output_path: str, attempt=0):
+    try:
+        g_pre_fun._path_audio_(
+            input_file,
+            output_path,
+            output_path,
+            "wav",
+        )
+    except ParameterError as e:
+        if str(e) == "Audio buffer is not finite everywhere" and attempt < 3:
+            run_worker(input_file, output_path, attempt + 1)
+            return
+        raise e
 
 
 def main():

@@ -11,7 +11,7 @@ def find_paths_with_files(input_path: str):
     total = 0
 
     # find paths that contain files
-    for root, _dirs, files in os.walk(input_path):
+    for root, _dirs, files in os.walk(input_path + "/"):
         if len(files) > 0:
             total += len(files)
             paths.append(root[len(input_path) + 1 :])
@@ -21,8 +21,8 @@ def find_paths_with_files(input_path: str):
 
 def find_files(input_path: str, ext: str = None, subfolder: str = None):
     """Find files with the given extension"""
-    for root, _dirs, files in os.walk(input_path):
-        path = root[len(input_path) :]
+    for root, _dirs, files in os.walk(input_path + "/"):
+        path = root[len(input_path) + 1 :]
         if subfolder and subfolder not in path:
             continue
 
