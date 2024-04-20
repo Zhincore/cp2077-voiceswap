@@ -18,6 +18,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from queue import Queue
 import warnings
+
 warnings.filterwarnings("ignore")
 
 torch.manual_seed(114514)
@@ -61,8 +62,7 @@ def run_worker(input_file: str, output_path: str, attempt=0):
         )
     except ParameterError as e:
         if str(e) == "Audio buffer is not finite everywhere" and attempt < 3:
-            run_worker(input_file, output_path, attempt + 1)
-            return
+            return run_worker(input_file, output_path, attempt + 1)
         raise e
 
 
@@ -72,9 +72,6 @@ def main():
     input_path = argv[2]
     output_path = argv[3]
     batch_size = int(argv[4]) if len(argv) > 4 else 1
-
-    def callback(file: str, _res):
-        print(file)
 
     with Pool(batch_size, init_worker, (model,)) as pool:
         results = Queue()
@@ -91,10 +88,14 @@ def main():
                 if file == "":
                     continue
 
+                dirname = os.path.dirname(file)
                 res = pool.apply_async(
                     run_worker,
-                    (os.path.join(input_path, file), output_path),
-                    callback=partial(callback, file),
+                    (
+                        os.path.join(input_path, file),
+                        os.path.join(output_path, dirname),
+                    ),
+                    callback=lambda _: print("##done##"),
                 )
                 results.put_nowait(res)
             except EOFError:

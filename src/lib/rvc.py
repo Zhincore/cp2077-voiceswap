@@ -33,118 +33,160 @@ async def _get_rvc_executable():
     return os.path.join(rvc_path, venv, "python")
 
 
-async def uvr(
+class UVR:
+    """UVR class."""
+
+    process = None
+    pbar = None
+
+    def __init__(self, model: str, input_path: str, output_path: str, batchsize: int):
+        self.model = model
+        self.input_path = input_path
+        self.output_path = output_path
+        self.batchsize = batchsize
+
+    async def start(self, total: int, title="Isolating vocals"):
+        """Start the UVR process."""
+        cwd = os.getcwd()
+
+        self.pbar = tqdm(total=total, desc=title)
+        self.process = await spawn(
+            "RVC's venv python",
+            await _get_rvc_executable(),
+            os.path.join(cwd, "libs/rvc_uvr.py"),
+            self.model,
+            os.path.join(cwd, self.input_path),
+            os.path.join(cwd, self.output_path),
+            str(self.batchsize),
+            cwd=os.getenv("RVC_PATH"),
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+        )
+
+    async def run(self):
+        """Start checking for progress."""
+        while self.process.returncode is None:
+            try:
+                line = await asyncio.wait_for(self.process.stdout.readline(), 5)
+                file = line.decode().strip()
+                if file == "##done##":
+                    self.pbar.update(1)
+                elif file != "":
+                    tqdm.write(file)
+            except asyncio.TimeoutError:
+                if not self.process.stdin.is_closing():
+                    # Wake up the process
+                    self.process.stdin.write("\n".encode())
+                    await self.process.stdin.drain()
+
+        if self.process.returncode != 0:
+            raise SubprocessException(
+                "UVR process exited with code: " + str(self.process.returncode)
+            )
+
+    async def submit(self, file: str):
+        """Submit a file to the UVR process."""
+        self.process.stdin.write((file + "\n").encode())
+        await self.process.stdin.drain()
+
+
+async def isolate_vocals(
     input_path: str,
     output_path: str,
     overwrite: bool = True,
     batchsize=1,
-    model="HP5_only_main_vocal",  # onnx_dereverb_By_FoxJoy
-    title="Isolating vocals",
+    cache_path=config.TMP_PATH,
 ):
-    """Splits audio files to vocals and the rest."""
+    """Splits audio files to vocals and the rest. The audio has to be correct wav."""
 
-    cwd = os.getcwd()
+    # Load list of files
+    files = []
 
-    parallel = Parallel(title)
+    if overwrite:
+        files = list(find_files(input_path))
+    else:
+        skipped = 0
 
-    uvr_process = await spawn(
-        "RVC's venv python",
-        await _get_rvc_executable(),
-        os.path.join(cwd, "libs/rvc_uvr.py"),
-        model,
-        os.path.join(cwd, config.TMP_PATH),
-        os.path.join(cwd, output_path),
-        str(batchsize),
-        cwd=os.getenv("RVC_PATH"),
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-    )
+        for file in find_files(input_path):
+            filename = os.path.basename(file)
+            output_filename = _get_output_filename(filename, config.UVR_FIRST_MODEL)
+            if os.path.exists(os.path.join(output_path, output_filename)):
+                skipped += 1
+            else:
+                files.append(file)
 
-    callbacks = {}
-
-    async def submit(file: str):
-        if uvr_process.returncode is not None:
-            return
-
-        def callback():
-            del callbacks[file]
-
-        callbacks[file] = callback
-        uvr_process.stdin.write((file + "\n").encode())
-        await uvr_process.stdin.drain()
-
-    async def checker():
-        while uvr_process.returncode is None:
-            try:
-                line = await asyncio.wait_for(uvr_process.stdout.readline(), 1)
-                file = line.decode().strip()
-                if file in callbacks:
-                    callbacks[file]()
-                elif file != "":
-                    tqdm.write(file)
-            except asyncio.TimeoutError:
-                # Wake up the process
-                if uvr_process.returncode is None:
-                    uvr_process.stdin.write(("\n").encode())
-                    await uvr_process.stdin.drain()
-
-        if uvr_process.returncode != 0:
-            raise SubprocessException("UVR exited with non-zero code")
-
-    dontoverwrite = {}
-
-    if not overwrite:
-        for root, _dirs, files in os.walk(output_path):
-            dontoverwrite[root] = list(files)
-
-    async def process(path):
-        path_dir = os.path.dirname(path)
-        os.makedirs(os.path.join(config.TMP_PATH, path_dir), exist_ok=True)
-
-        tmp_path = path.replace(".ogg", ".wav")
-        await ffmpeg.to_wav(
-            os.path.join(input_path, path),
-            os.path.join(config.TMP_PATH, tmp_path),
-        )
-        await submit(tmp_path)
-
-    skipped = 0
-
-    for path in find_files(input_path):
-        path_dir = os.path.dirname(path)
-        is_skipped = False
-
-        if not overwrite:
-            basename = os.path.basename(path).split(".")[0]
-            if os.path.join(output_path, path_dir) in dontoverwrite:
-                for file in dontoverwrite[os.path.join(output_path, path_dir)]:
-                    if file.startswith(basename):
-                        skipped += 1
-                        is_skipped = True
-                        break
-
-        if not is_skipped:
-            parallel.run(process, path)
-
-    if not overwrite:
         tqdm.write(f"Skipping {skipped} already done files.")
 
-    async def run():
-        await parallel.wait()
-        uvr_process.stdin.write_eof()
-        await uvr_process.stdin.drain()
+    if len(files) == 0:
+        tqdm.write("No files to process.")
+        return
 
-    try:
-        await asyncio.gather(run(), checker())
+    # Prepare
+    formatted_path = os.path.join(cache_path, "formatted")
+    split_path = os.path.join(cache_path, "split")
 
-        result = await uvr_process.wait()
-        if result != 0:
-            raise SubprocessException(
-                f"Converting files failed with exit code {result}"
+    # Prepare conversion and splitting
+    uvr_split = UVR(config.UVR_FIRST_MODEL, formatted_path, split_path, batchsize)
+    ffmpegs = Parallel("[Phase 1/3] Converting files", leave=True)
+
+    async def convert_and_process(file: str):
+        dirname = os.path.dirname(file)
+        os.makedirs(os.path.join(formatted_path, dirname), exist_ok=True)
+
+        output_file = file.replace(".ogg", ".wav")
+        output_path = os.path.join(formatted_path, output_file)
+        if overwrite or not os.path.exists(output_path):
+            await ffmpeg.to_wav(os.path.join(input_path, file), output_path)
+
+        await uvr_split.submit(output_file)
+
+    cached = 0
+
+    for file in files:
+        if not overwrite:
+            filename = os.path.basename(file)
+            dirname = os.path.dirname(file)
+            output_filename = filename.replace(".ogg", ".wav")
+            output_filename = _get_output_filename(
+                output_filename, config.UVR_FIRST_MODEL
             )
-    finally:
-        tqdm.write("Cleaning up...")
-        shutil.rmtree(config.TMP_PATH, ignore_errors=True)
+            if os.path.exists(os.path.join(split_path, dirname, output_filename)):
+                cached += 1
+                continue
+
+        ffmpegs.run(convert_and_process, file)
+
+    if cached > 0:
+        tqdm.write(f"Skipping {cached} already split files")
+
+    # Run conversion and splitting
+    await uvr_split.start(ffmpegs.count_jobs(), "[Phase 2/3] Splitting vocals")
+
+    await asyncio.gather(ffmpegs.wait(), uvr_split.run())
+
+    # Run dereverb
+    uvr_dereverb = UVR(
+        config.UVR_SECOND_MODEL, formatted_path, split_path, batchsize / 4
+    )
+    await uvr_dereverb.start(len(files), "[Phase 3/3] Removing reverb")
+    for file in files:
+        await uvr_dereverb.submit(file)
+
+    await uvr_dereverb.run()
+
+    tqdm.write("Cleaning up...")
+    shutil.rmtree(config.TMP_PATH, ignore_errors=True)
+
+
+def _get_output_filename(filename: str, model: str, instrument=False):
+    """Get output filename for given input filename after processing by given model."""
+    if model == "onnx_dereverb_By_FoxJoy":
+        suffix = "others" if instrument else "vocal"
+        return f"{filename}_{suffix}.wav"
+
+    agg = 15  # set by the RVC script
+    prefix = "instrument" if instrument else "vocal"
+    return f"{prefix}_{filename}_{agg}.wav"
 
 
 async def batch_rvc(input_path: str, opt_path: str, overwrite: bool, **kwargs):

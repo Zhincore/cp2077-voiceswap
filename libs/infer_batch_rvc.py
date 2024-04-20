@@ -28,6 +28,11 @@ from infer.modules.vc.pipeline import Pipeline, ah, bh, change_rms
 from infer.modules.vc.utils import *
 from scipy import signal
 from torch.multiprocessing import Pool
+import warnings
+
+warnings.filterwarnings("ignore")
+
+torch.manual_seed(114514)
 
 g_vc = None
 g_args = None

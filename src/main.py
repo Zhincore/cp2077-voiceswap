@@ -17,6 +17,7 @@ from lib import (
     rvc,
     sfx_mapping,
     tts,
+    uvr,
     vgmstream,
     wolvenkit,
     wwise,
@@ -251,7 +252,7 @@ async def export_wem(args: Namespace):
 
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
-    await rvc.uvr(args.input, args.output, args.overwrite, args.batchsize)
+    await uvr.isolate_vocals(args.input, args.output, args.overwrite, args.batchsize)
 
 
 async def export_subtitle_map(args: Namespace):

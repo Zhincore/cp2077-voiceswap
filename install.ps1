@@ -76,6 +76,9 @@ python -m venv .venv
 Write-Information -MessageData "Install python dependencies" -InformationAction Continue
 
 pip install .
+pip install --force-reinstall torch torchvision torchaudio
+pip install --force-reinstall onnxruntime-gpu
+pip install --force-reinstall "numpy<1.24"
 
 Write-Information -MessageData "Done" -InformationAction Continue
 
