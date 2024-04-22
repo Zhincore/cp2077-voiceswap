@@ -1,6 +1,4 @@
 import asyncio
-from pathlib import Path
-from typing import Optional
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
