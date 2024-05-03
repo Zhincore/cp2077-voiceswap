@@ -1,6 +1,7 @@
 import os
-import re
-
+import string
+from itertools import chain
+from dataclasses import dataclass
 from util import Parallel, SubprocessException, spawn
 
 FFMPEG_ARGS = (
@@ -52,29 +53,54 @@ async def to_wav(source: str, output: str, *args):
     )
 
 
-async def merge_vocals(
-    vocals_path: str,
-    others_path: str,
+@dataclass
+class InputItem:
+    """Class for passing input settings for merging."""
+
+    path: str
+    volume: float = 1
+    suffix: str = ".wav"
+    optional: bool = False
+
+
+async def merge(
+    inputs: list[InputItem],
     output_path: str,
-    voice_vol: float = 1.5,
-    effect_vol: float = 1,
+    output_suffix=".wav",
     filter_complex: str = "anull",
 ):
     """Merges vocals with effects."""
-    parallel = Parallel("Merging vocals")
+
+    items = len(inputs)
+    volumes = ";".join(
+        map(
+            lambda v: f"[{v[0]}]volume={v[1].volume}[{string.ascii_lowercase[v[0]]}]",
+            enumerate(inputs),
+        )
+    )
+    input_map = "".join(map(lambda i: f"[{string.ascii_lowercase[i]}]", range(items)))
+    primary_item = inputs[0]
 
     async def process(name: str, path: str):
-        other_name = re.sub(r"_main_vocal(\.wav)+$", "_others.wav", name)
-        base_name = re.sub(
-            r"\.\w+(\.reformatted.wav)?_main_vocal(\.wav)+", ".wav", name
-        )
-        output = os.path.join(output_path, path, base_name)
+        base_name = name.replace(primary_item.suffix, "")
+        output = os.path.join(output_path, path, base_name + output_suffix)
 
         process = await spawn_ffmpeg(
-            *("-i", os.path.join(vocals_path, path, name)),
-            *("-i", os.path.join(others_path, path, other_name)),
+            *chain(
+                *(
+                    (
+                        "-i",
+                        os.path.join(
+                            item.path,
+                            path,
+                            base_name + item.suffix,
+                        ),
+                    )
+                    for item in inputs
+                )
+            ),
             "-filter_complex",
-            f"[0]volume={voice_vol}[a];[1]volume={effect_vol}[b];[a][b]amix=inputs=2:duration=longest,{filter_complex}",
+            f"{volumes};{input_map}amix=inputs={items}:duration=longest,{filter_complex}",
             output,
             "-y",
         )
@@ -85,12 +111,14 @@ async def merge_vocals(
                 f"Merging file {base_name} failed with exit code {result}"
             )
 
-    for root, _dirs, files in os.walk(vocals_path):
-        path = root[len(vocals_path) + 1 :]
+    parallel = Parallel("Merging vocals")
+    for root, _dirs, files in os.walk(primary_item.path + "/"):
+        path = root[len(primary_item.path) + 1 :]
         os.makedirs(os.path.join(output_path, path), exist_ok=True)
 
         for name in files:
-            parallel.run(process, name, path)
+            if name.endswith(primary_item.suffix):
+                parallel.run(process, name, path)
 
     await parallel.wait()
     print("Merging done!")

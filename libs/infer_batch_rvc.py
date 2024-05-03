@@ -7,6 +7,7 @@ import traceback
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 import sys
+import time
 
 import tqdm as tq
 from dotenv import load_dotenv
@@ -189,7 +190,7 @@ def pipeline(
         )
         pitch = pitch[:p_len]
         pitchf = pitchf[:p_len]
-        if self.device == "mps":
+        if "mps" not in str(self.device) or "xpu" not in str(self.device):
             pitchf = pitchf.astype(np.float32)
         pitch = torch.tensor(pitch, device=self.device).unsqueeze(0).long()
         pitchf = torch.tensor(pitchf, device=self.device).unsqueeze(0).float()
@@ -397,6 +398,11 @@ def arg_parse() -> tuple:
     parser.add_argument(
         "--batchsize", type=int, default=1, help="how many RVC processes to spawn"
     )
+    parser.add_argument(
+        "--suffix",
+        default=".wav",
+        help="What suffix must the file have to be processed",
+    )
 
     args = parser.parse_args()
     sys.argv = sys.argv[:1]
@@ -416,28 +422,35 @@ def init_worker(p_args):
     g_vc.get_vc(g_args.model_name)
 
 
-def run_worker(file_path, *params):
+def run_worker(file_path, attempt=0):
     args = g_args
     vc = g_vc
 
-    _, wav_opt = vc_single(
-        vc,
-        0,
-        os.path.join(args.input_path, file_path),
-        args.f0up_key,
-        args.f0_contrast,
-        None,
-        args.f0method,
-        args.index_path,
-        "",
-        args.index_rate,
-        args.filter_radius,
-        args.resample_sr,
-        args.rms_mix_rate,
-        args.protect,
-    )
-    out_path = os.path.join(args.opt_path, file_path)
-    wavfile.write(out_path, wav_opt[0], wav_opt[1])
+    try:
+        _, wav_opt = vc_single(
+            vc,
+            0,
+            os.path.join(args.input_path, file_path),
+            args.f0up_key,
+            args.f0_contrast,
+            None,
+            args.f0method,
+            args.index_path,
+            "",
+            args.index_rate,
+            args.filter_radius,
+            args.resample_sr,
+            args.rms_mix_rate,
+            args.protect,
+        )
+        out_path = os.path.join(args.opt_path, file_path)
+        wavfile.write(out_path, wav_opt[0], wav_opt[1])
+    except (RuntimeError, AttributeError):
+        if attempt < 3:
+            time.sleep(0.1)
+            run_worker(file_path, attempt + 1)
+        else:
+            raise
 
 
 def main():
@@ -448,7 +461,7 @@ def main():
     audios = []
     for root, _dirs, files in os.walk(args.input_path):
         for file in files:
-            if not file.endswith(".wav"):
+            if not file.endswith(args.suffix):
                 continue
 
             file_path = os.path.join(root[len(args.input_path) + 1 :], file)
@@ -458,7 +471,7 @@ def main():
             if args.overwrite or not os.path.exists(out_path):
                 audios.append(file_path)
 
-    pbar = tq.tqdm("Converting", total=len(audios), unit="file")
+    pbar = tq.tqdm(desc="Revoicing", total=len(audios), unit="file")
 
     with Pool(args.batchsize, init_worker, (args,)) as pool:
         for _ in pool.imap_unordered(run_worker, audios):

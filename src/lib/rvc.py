@@ -214,4 +214,4 @@ async def batch_rvc(input_path: str, opt_path: str, overwrite: bool, **kwargs):
     result = await process.wait()
 
     if result != 0:
-        raise SubprocessException(f"Converting files failed with exit code {result}")
+        raise SubprocessException(f"Revoicing files failed with exit code {result}")

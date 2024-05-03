@@ -1,6 +1,5 @@
 import asyncio
 import os
-import shutil
 from functools import partial
 import logging
 from inspect import currentframe, getframeinfo
@@ -95,7 +94,7 @@ class UVRProcess(Process):
                 "enable_denoise": True,
             },
             vr_params={
-                "batch_size": 1,
+                "batch_size": 4,
                 "window_size": 320,
                 "aggression": 5,
                 "enable_tta": False,
@@ -162,9 +161,7 @@ class UVRProcessManager:
 
     def wait(self):
         """Wait for all workers to finish."""
-        for worker in self._workers:
-            if worker.is_alive():
-                worker.wait()
+        self._queue.join()
 
     async def watch(self):
         """Wait and update the progress asynchronously."""
@@ -183,6 +180,7 @@ class UVRProcessManager:
                     new_worker.start()
                     self._workers.add(new_worker)
 
+            # TODO: a return queue?
             await asyncio.sleep(0.01)
 
     def terminate(self):
@@ -198,12 +196,15 @@ class UVRProcessManager:
 
 async def isolate_vocals(
     input_path: str,
-    output_path: str,
+    cache_path=config.CACHE_PATH,
     overwrite: bool = True,
     n_workers=1,
-    cache_path=config.TMP_PATH,
 ):
     """Splits audio files to vocals and the rest. The audio has to be correct wav."""
+    # Prepare paths
+    formatted_path = os.path.join(cache_path, config.UVR_FORMAT_CACHE)
+    split_path = os.path.join(cache_path, config.UVR_FIRST_CACHE)
+    reverb_path = os.path.join(cache_path, config.UVR_SECOND_CACHE)
 
     # Load list of files
     files = set(find_files(input_path))
@@ -212,8 +213,8 @@ async def isolate_vocals(
         skipped = 0
 
         for file in list(files):
-            output_file = file.replace(".ogg", ".wav") + "_vocals.wav"
-            if os.path.exists(os.path.join(output_path, output_file)):
+            output_file = file.replace(".ogg", ".wav")
+            if os.path.exists(os.path.join(reverb_path, output_file)):
                 skipped += 1
                 files.remove(file)
 
@@ -222,10 +223,6 @@ async def isolate_vocals(
     if len(files) == 0:
         tqdm.write("No files to process.")
         return
-
-    # Prepare paths
-    formatted_path = os.path.join(cache_path, "formatted")
-    split_path = os.path.join(cache_path, "split")
 
     # Prepare conversion and splitting
     ffmpegs = Parallel("[Phase 1/3] Converting files", leave=True, unit="file")
@@ -250,7 +247,7 @@ async def isolate_vocals(
     split_files = []
 
     for file in files:
-        output_file = file.replace(".ogg", ".wav") + "_vocals.wav"
+        output_file = file.replace(".ogg", ".wav") + config.UVR_FIRST_SUFFIX
 
         if not overwrite:
             output = os.path.join(split_path, output_file)
@@ -269,6 +266,7 @@ async def isolate_vocals(
     split_pbar.reset(ffmpegs.count_jobs())
 
     await asyncio.gather(ffmpegs.wait(), uvr_workers.watch())
+    split_pbar.close()
 
     tqdm.write("Waiting for workers...")
     uvr_workers.wait()
@@ -281,11 +279,13 @@ async def isolate_vocals(
     uvr_workers.set_model(config.UVR_SECOND_MODEL)
 
     for file in files:
-        input_file = file.replace(".ogg", ".wav") + "_vocals.wav"
-        uvr_workers.submit(split_path, output_path, input_file)
+        input_file = file.replace(".ogg", ".wav") + config.UVR_FIRST_SUFFIX
+        uvr_workers.submit(split_path, reverb_path, input_file)
 
     await uvr_workers.watch()
+    split_pbar.close()
 
+    tqdm.write("Waiting for workers...")
     uvr_workers.wait()
     uvr_workers.terminate()
     uvr_workers.join()

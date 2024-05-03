@@ -252,7 +252,7 @@ async def export_wem(args: Namespace):
 
 async def isolate_vocals(args: Namespace):
     """Splits audio files to vocals and the rest."""
-    await uvr.isolate_vocals(args.input, args.output, args.overwrite, args.batchsize)
+    await uvr.isolate_vocals(args.input, args.cache, args.overwrite, args.batchsize)
 
 
 async def export_subtitle_map(args: Namespace):
@@ -336,12 +336,29 @@ async def revoice_sfx(args: Namespace):
 
 async def merge_vocals(args: Namespace):
     """Merge vocals with effects."""
-    await ffmpeg.merge_vocals(
-        args.vocals_path,
-        args.others_path,
+    await ffmpeg.merge(
+        [
+            # Voice
+            ffmpeg.InputItem(
+                args.voice_path,
+                args.voice_vol,
+                ".wav" + config.UVR_SECOND_SUFFIX,
+            ),
+            # Instrumentals
+            ffmpeg.InputItem(
+                os.path.join(args.effect_cache, config.UVR_FIRST_CACHE),
+                args.effect_vol,
+                ".wav" + config.UVR_FIRST_SUFFIX_O,
+            ),
+            # Reverb
+            ffmpeg.InputItem(
+                os.path.join(args.effect_cache, config.UVR_SECOND_CACHE),
+                args.effect_vol,
+                ".wav" + config.UVR_SECOND_SUFFIX_O,
+            ),
+        ],
         args.output_path,
-        args.voice_vol,
-        args.effect_vol,
+        args.format,
         args.filter_complex,
     )
 

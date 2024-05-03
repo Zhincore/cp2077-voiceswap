@@ -13,11 +13,16 @@ WOLVENKIT_OUTPUT = CACHE_PATH + "/archive"
 
 WW2OGG_OUTPUT = CACHE_PATH + "/raw"
 
+UVR_FORMAT_CACHE = "formatted"
 UVR_MODEL_CACHE = CACHE_PATH + "/uvr_models"
 UVR_FIRST_MODEL = "6_HP-Karaoke-UVR.pth"
+UVR_FIRST_SUFFIX = "_vocals.wav"
+UVR_FIRST_SUFFIX_O = "_instrumental.wav"
+UVR_FIRST_CACHE = "karaoke"
 UVR_SECOND_MODEL = "Reverb_HQ_By_FoxJoy.onnx"
-UVR_OUTPUT_VOCALS = CACHE_PATH + "/split/vocals"
-UVR_OUTPUT_REST = CACHE_PATH + "/split/rest"
+UVR_SECOND_SUFFIX = UVR_FIRST_SUFFIX + "_instrumental.wav"
+UVR_SECOND_SUFFIX_O = UVR_FIRST_SUFFIX + "_reverb.wav"
+UVR_SECOND_CACHE = "isolated"
 
 TTS_OUTPUT = CACHE_PATH + "/tts"
 

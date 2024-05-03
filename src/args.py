@@ -185,10 +185,10 @@ isolate_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
-    "output",
+    "cache",
     type=str,
     help="Path where to output the vocals.",
-    default=config.UVR_OUTPUT_VOCALS,
+    default=config.CACHE_PATH,
     nargs=argparse.OPTIONAL,
 )
 isolate_vocals.add_argument(
@@ -313,7 +313,7 @@ revoice.add_argument(
     "--input_path",
     type=str,
     help="input path, relative to VoiceSwap",
-    default=config.UVR_OUTPUT_VOCALS,
+    default=config.CACHE_PATH + "/" + config.UVR_SECOND_CACHE,
 )
 revoice.add_argument(
     "--index_path",
@@ -395,6 +395,11 @@ revoice.add_argument(
     action=argparse.BooleanOptionalAction,
     help="Whether to overwrite old files",
 )
+revoice.add_argument(
+    "--suffix",
+    default=config.CACHE_PATH + "/" + config.UVR_SECOND_CACHE,
+    help="What suffix must the file have to be processed",
+)
 
 # Revoice SFX
 revoice_sfx = subcommands.add_parser(
@@ -425,17 +430,17 @@ revoice_sfx.add_argument(
 # Merge vocals
 merge_vocals = subcommands.add_parser("merge_vocals", help="Merge vocals with effects.")
 merge_vocals.add_argument(
-    "vocals_path",
+    "voice_path",
     type=str,
-    help="Path to folder of vocals.",
+    help="Path to folder with revocied audio.",
     default=config.RVC_OUTPUT,
     nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
-    "others_path",
+    "effect_cache",
     type=str,
-    help="Path to folder of effects.",
-    default=config.UVR_OUTPUT_REST,
+    help="Path to folder cache.",
+    default=config.CACHE_PATH,
     nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
@@ -446,22 +451,31 @@ merge_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
+    "--format",
+    help="Output suffix.",
+    default=".wav",
+    nargs=argparse.OPTIONAL,
+)
+merge_vocals.add_argument(
     "--voice-vol",
     type=float,
     help="Adjust the volume of the voice. 1 is original volume.",
     default=1.5,
+    nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
     "--effect-vol",
     type=float,
     help="Adjust the volume of the effects. 1 is original volume.",
     default=1,
+    nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
     "filter_complex",
     type=str,
     help="Additional filter to pass to ffmpeg.",
     default="anull",
+    nargs=argparse.OPTIONAL,
 )
 
 # wwise convert
