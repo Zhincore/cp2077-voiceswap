@@ -207,7 +207,7 @@ class BanksParser:
                 if is_media or name.startswith("CAk"):
                     self.__object = BankObject(name)
                     if is_media:
-                        self.__object.data["bank"] = self.__bank_path
+                        self.__object.data["bank"] = [self.__bank_path]
 
             case "list":
                 if self.__object is not None and name == _ALLOWED_LISTS.get(
