@@ -397,7 +397,7 @@ revoice.add_argument(
 )
 revoice.add_argument(
     "--suffix",
-    default=config.CACHE_PATH + "/" + config.UVR_SECOND_CACHE,
+    default=".wav" + config.UVR_SECOND_SUFFIX,
     help="What suffix must the file have to be processed",
 )
 
@@ -425,6 +425,35 @@ revoice_sfx.add_argument(
     type=str,
     help="output path, relative to VoiceSwap",
     default=config.SFX_RVC_OUTPUT,
+)
+
+# Revoice silent
+revoice_silent = subcommands.add_parser(
+    "revoice_silent",
+    help="Try to revoice files that came out silent from merging.",
+    parents=[revoice],
+    conflict_handler="resolve",
+)
+revoice_silent.add_argument(
+    "file_list",
+    type=str,
+    help="Path to the json merge_vocals generated.",
+    default=config.MERGED_OUTPUT + "/" + config.MERGED_SILENT_FILENAME,
+    nargs=argparse.OPTIONAL,
+)
+revoice_silent.add_argument(
+    "input",
+    type=str,
+    help="Input path, relative to VoiceSwap",
+    default=config.WW2OGG_OUTPUT,
+    nargs=argparse.OPTIONAL,
+)
+revoice_silent.add_argument(
+    "input_suffix",
+    type=str,
+    help="Suffix of the files to be processed (.ogg).",
+    default=".ogg",
+    nargs=argparse.OPTIONAL,
 )
 
 # Merge vocals
@@ -471,11 +500,17 @@ merge_vocals.add_argument(
     nargs=argparse.OPTIONAL,
 )
 merge_vocals.add_argument(
-    "filter_complex",
+    "--filter-complex",
     type=str,
     help="Additional filter to pass to ffmpeg.",
     default="anull",
     nargs=argparse.OPTIONAL,
+)
+merge_vocals.add_argument(
+    "--overwrite",
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Whether to overwrite old files",
 )
 
 # wwise convert

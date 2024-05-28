@@ -330,8 +330,8 @@ async def revoice_sfx(args: Namespace):
     rest_args = dict(args.__dict__)
     del rest_args["subcommand"]
     del rest_args["gender"]
-    rest_args["input_path"] = input_path
-    await rvc.batch_rvc(**rest_args)
+    del rest_args["input_path"]
+    await rvc.batch_rvc(input_path, **rest_args)
 
 
 async def merge_vocals(args: Namespace):
@@ -343,24 +343,56 @@ async def merge_vocals(args: Namespace):
                 args.voice_path,
                 args.voice_vol,
                 ".wav" + config.UVR_SECOND_SUFFIX,
+                normalize=True,
             ),
             # Instrumentals
             ffmpeg.InputItem(
                 os.path.join(args.effect_cache, config.UVR_FIRST_CACHE),
                 args.effect_vol,
                 ".wav" + config.UVR_FIRST_SUFFIX_O,
+                optional=True,
             ),
             # Reverb
             ffmpeg.InputItem(
                 os.path.join(args.effect_cache, config.UVR_SECOND_CACHE),
                 args.effect_vol,
                 ".wav" + config.UVR_SECOND_SUFFIX_O,
+                optional=True,
             ),
         ],
         args.output_path,
         args.format,
+        args.overwrite,
         args.filter_complex,
     )
+
+
+async def revoice_silent(args: Namespace):
+    """Try to revoice files that came out silent."""
+    with open(args.file_list, "r", encoding="utf-8") as f:
+        silent_files = json.load(f)
+
+    tmp_path = os.path.join(config.TMP_PATH, "silent")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    os.makedirs(tmp_path)
+
+    for file in tqdm(silent_files, desc="Copying files", unit="file"):
+        dirname = os.path.dirname(file)
+        os.makedirs(os.path.join(tmp_path, dirname), exist_ok=True)
+
+        shutil.copyfile(
+            os.path.join(args.input, file + args.input_suffix),
+            os.path.join(tmp_path, file + args.suffix),
+        )
+
+    rest_args = dict(args.__dict__)
+    del rest_args["file_list"]
+    del rest_args["input_suffix"]
+    del rest_args["input"]
+    rest_args["input_path"] = tmp_path
+
+    await revoice(Namespace(**rest_args))
+    shutil.rmtree(tmp_path)
 
 
 async def wwise_import(args: Namespace):
@@ -413,6 +445,7 @@ async def _main():
         "revoice": revoice,
         "revoice_sfx": revoice_sfx,
         "merge_vocals": merge_vocals,
+        "revoice_silent": revoice_silent,
         "wwise": wwise_import,
         "move_wwise_files": move_wwise_files,
         "pack_opuspaks": pack_opuspaks,

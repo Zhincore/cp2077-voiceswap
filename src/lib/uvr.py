@@ -213,7 +213,7 @@ async def isolate_vocals(
         skipped = 0
 
         for file in list(files):
-            output_file = file.replace(".ogg", ".wav")
+            output_file = file.replace(".ogg", ".wav") + config.UVR_SECOND_SUFFIX
             if os.path.exists(os.path.join(reverb_path, output_file)):
                 skipped += 1
                 files.remove(file)

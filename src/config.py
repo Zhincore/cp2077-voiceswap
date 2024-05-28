@@ -30,6 +30,7 @@ RVC_OUTPUT = CACHE_PATH + "/voiced"
 SFX_RVC_OUTPUT = CACHE_PATH + "/voiced_sfx"
 
 MERGED_OUTPUT = CACHE_PATH + "/merged"
+MERGED_SILENT_FILENAME = "_silent_files.json"
 
 WWISE_PROJECT = CACHE_PATH + "/wwise_project"
 WWISE_OUTPUT = CACHE_PATH + "/complete"

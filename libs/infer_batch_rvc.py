@@ -422,40 +422,39 @@ def init_worker(p_args):
     g_vc.get_vc(g_args.model_name)
 
 
-def run_worker(file_path, attempt=0):
+def run_worker(file_path):
     args = g_args
     vc = g_vc
 
-    try:
-        _, wav_opt = vc_single(
-            vc,
-            0,
-            os.path.join(args.input_path, file_path),
-            args.f0up_key,
-            args.f0_contrast,
-            None,
-            args.f0method,
-            args.index_path,
-            "",
-            args.index_rate,
-            args.filter_radius,
-            args.resample_sr,
-            args.rms_mix_rate,
-            args.protect,
-        )
-        out_path = os.path.join(args.opt_path, file_path)
-        wavfile.write(out_path, wav_opt[0], wav_opt[1])
-    except (RuntimeError, AttributeError):
-        if attempt < 3:
-            time.sleep(0.1)
-            run_worker(file_path, attempt + 1)
-        else:
-            raise
+    _, wav_opt = vc_single(
+        vc,
+        0,
+        os.path.join(args.input_path, file_path),
+        args.f0up_key,
+        args.f0_contrast,
+        None,
+        args.f0method,
+        args.index_path,
+        "",
+        args.index_rate,
+        args.filter_radius,
+        args.resample_sr,
+        args.rms_mix_rate,
+        args.protect,
+    )
+    if wav_opt[1] is None:
+        tq.tqdm.write(f"FILE FAILED: {file_path}")
+        return
+    out_path = os.path.join(args.opt_path, file_path)
+    wavfile.write(out_path, wav_opt[0], wav_opt[1])
 
 
 def main():
     load_dotenv(".env")
     args = arg_parse()
+
+    if args.index_path and not os.path.exists(args.index_path):
+        tq.tqdm.write("WARNING: Index file does not exist!!")
 
     # Collect tasks
     audios = []
