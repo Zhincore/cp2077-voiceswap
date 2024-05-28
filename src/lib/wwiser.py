@@ -131,7 +131,7 @@ class BanksParser:
     __objects: dict
 
     def __init__(self, bank_folder: str):
-        self.__bank_folder = bank_folder
+        self.__bank_folder = bank_folder.replace("/", "\\") + "\\"
 
         self.__p = xml.parsers.expat.ParserCreate()
         self.__p.StartElementHandler = self.__start_element
@@ -167,12 +167,12 @@ class BanksParser:
         self.update__progress()
 
         name = attrs["name"] if "name" in attrs else None
-
         match node_type:
             case "root":
-                self.__bank_path = os.path.relpath(
-                    os.path.join(attrs["path"], attrs["filename"]),
-                    self.__bank_folder,
+                self.__bank_path = (
+                    attrs["path"].split(self.__bank_folder, 2)[1]
+                    + "\\"
+                    + attrs["filename"]
                 )
 
             case "field":
@@ -207,7 +207,7 @@ class BanksParser:
                 if is_media or name.startswith("CAk"):
                     self.__object = BankObject(name)
                     if is_media:
-                        self.__object.data["bank"] = [self.__bank_path]
+                        self.__object.data["bank"] = set([self.__bank_path])
 
             case "list":
                 if self.__object is not None and name == _ALLOWED_LISTS.get(

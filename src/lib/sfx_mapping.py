@@ -259,7 +259,7 @@ def _save_sound(sounds: dict, entry: dict, params: dict):
 
             for sub_child in __g_bnk_entries[source_id]:
                 if "bank" in sub_child["data"]:
-                    embedded_in.append(sub_child["data"]["bank"])
+                    embedded_in.extend(sub_child["data"]["bank"])
                 elif "sourceId" in sub_child["data"]:
                     has_children = True
                     break
